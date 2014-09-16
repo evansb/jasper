@@ -1,0 +1,7 @@
+dist/
+java-src/
+*.zip
+*.txt
+.cabal-sandbox/
+cabal.sandbox.config
+.ghci
