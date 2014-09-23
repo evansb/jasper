@@ -27,20 +27,3 @@ data T  = Identifier String
         | Period     | TPeriod
         | At         | DColon
         DERIVE
-
-data PrimitiveType = NumericType NumericTypeKeyword
-                   | BooleanType
-                   DERIVE
-
-data WildcardBound = Extend | Super
-                   DERIVE
-
-data Wildcard = Wildcard [(WildcardBound, ReferenceType)]
-              DERIVE
-
-data ReferenceType = ClassType [Either ReferenceType Wildcard]
-                   DERIVE
-
-data NumericTypeKeyword = JByte | JShort | JInt | JLong | JChar |
-                          JFloat | JDouble
-                        DERIVE
