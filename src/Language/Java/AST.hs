@@ -1,7 +1,9 @@
-
+{-# LANGUAGE CPP #-}
 module Language.Java.AST where
 
 import Text.Parsec
+
+#define DERIVE deriving(Eq,Show)
 
 type Token = (T, SourcePos)
 data T  = Identifier String
@@ -24,21 +26,21 @@ data T  = Identifier String
         | SemiColon  | Comma
         | Period     | TPeriod
         | At         | DColon
-        deriving (Eq, Show)
+        DERIVE
 
 data PrimitiveType = NumericType NumericTypeKeyword
                    | BooleanType
-                   deriving (Eq, Show)
+                   DERIVE
 
 data WildcardBound = Extend | Super
-                  deriving (Eq, Show)
+                   DERIVE
 
 data Wildcard = Wildcard [(WildcardBound, ReferenceType)]
-              deriving (Eq, Show)
+              DERIVE
 
 data ReferenceType = ClassType [Either ReferenceType Wildcard]
-                   deriving (Eq, Show)
+                   DERIVE
 
 data NumericTypeKeyword = JByte | JShort | JInt | JLong | JChar |
                           JFloat | JDouble
-                        deriving (Eq, Show)
+                        DERIVE
