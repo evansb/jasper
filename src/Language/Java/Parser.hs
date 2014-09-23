@@ -2,8 +2,10 @@
 module Language.Java.Parser where
 
 import Text.Parsec
-import Language.Java.Parser.Internal
+import qualified Language.Java.Parser.Core as C
 import Language.Java.Lexer
+
+type JParser a = C.JParser a
 
 parseJava :: JParser a -> String -> a
 parseJava p s =

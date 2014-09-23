@@ -32,7 +32,7 @@ identOrKeyword = do
     s <- identifier
     return $ if Data.Misc.isKeyword s
         then (Keyword s, p)
-        else (Identifier s, p)
+        else (TokIdent s, p)
 
 tokInt      =  TokInt       <=+ integerLiteral
 tokDouble   =  TokFloat     <=+ floatLiteral

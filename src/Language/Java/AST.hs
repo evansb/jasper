@@ -6,8 +6,7 @@ import Text.Parsec
 #define DERIVE deriving(Eq,Show)
 
 type Token = (T, SourcePos)
-data T  = Identifier String
-        | Keyword    String
+data T  = Keyword    String
         | Operator   String
 
         | TokInt     Integer
@@ -27,3 +26,15 @@ data T  = Identifier String
         | Period     | TPeriod
         | At         | DColon
         DERIVE
+
+--- | Names and Identifiers
+
+-- | A single identifier [ident]
+---  e.g foo
+data Ident = Ident String
+           DERIVE
+
+-- | Identifiers separated by period [name]
+--   e.g foo.bar.baz
+data Name = Name [Ident]
+          DERIVE
