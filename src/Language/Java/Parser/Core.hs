@@ -31,7 +31,10 @@ getSS (A.TokIdent   s) = s
 getSS (A.Keyword    s) = s
 getSS (A.Operator   s) = s
 getSS _ = undefined
---
+
+(===) :: A.T -> String -> Bool
+t === s = getSS t == s
+
 -- Misc. functions --
 isIdentifier (A.TokIdent _) = True
 isIdentifier _ = False

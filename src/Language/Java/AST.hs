@@ -57,5 +57,18 @@ data PrimType
     DERIVE
 
 -- | Reference types [refType]
-data RefType = Foo
+data RefType = ClassOrInterfaceT [(Ident, [TypeArg])]
+             | ArrayT ArrayT
              DERIVE
+
+data TypeArg = ActualT RefType
+             | Wildcard (Maybe WildcardBound)
+             DERIVE
+
+data WildcardBound = SuperWB RefType
+                   | ExtendsWB RefType
+                   DERIVE
+
+data ArrayT = PrimArrayT
+            | RefArrayT
+            DERIVE
