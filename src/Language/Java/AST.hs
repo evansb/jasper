@@ -56,7 +56,6 @@ data PrimType
     | DoubleT
     DERIVE
 
-
 type ClassType = (Ident, Maybe [TypeArg])
 
 -- | Reference types [refType]

@@ -12,6 +12,11 @@ import Language.Java.Parser.Core
 import Language.Java.Parser.Basic
 import Language.Java.AST
 
+-- Java types
+type_ :: JParser Type
+type_ = try (PrimType <$> primType)
+     <|> (RefType <$> refType)
+
 -- | Primitive types
 primType :: JParser PrimType
 primType = (do
