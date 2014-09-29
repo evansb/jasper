@@ -62,3 +62,4 @@ greaterThan = satisfy (\x -> isOperator x && x === ">")
 comma = satisfy isComma
 lSquare = satisfy isLSquare
 rSquare = satisfy isRSquare
+dot = satisfy isPeriod

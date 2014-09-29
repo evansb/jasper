@@ -39,7 +39,7 @@ refType = (try classOrInterfaceT <|> arrayType)
        <?> "reference type"
 
 classOrInterfaceT :: JParser RefType
-classOrInterfaceT = ClassOrInterfaceType <$> many1 classType
+classOrInterfaceT = ClassOrInterfaceType <$> (classType `sepBy1` dot)
 
 classType :: JParser ClassType
 classType = (,) <$> ident <*> optionMaybe typeArgs
