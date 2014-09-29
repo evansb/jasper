@@ -44,3 +44,13 @@ isKeyword _ = False
 
 isPeriod A.Period = True
 isPeriod _ = False
+
+isOperator (A.Operator _) = True
+isOperator  _ = False
+
+isComma A.Comma = True
+isComma _ = False
+
+lessThan = satisfy (\x -> isOperator x && x === "<")
+greaterThan = satisfy (\x -> isOperator x && x === ">")
+comma = satisfy isComma
