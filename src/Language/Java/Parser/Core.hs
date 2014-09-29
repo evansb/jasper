@@ -26,9 +26,18 @@ getS (A.Keyword    s) = return s
 getS (A.Operator   s) = return s
 getS _ = undefined
 
+getSS :: A.T -> String
+getSS (A.TokIdent   s) = s
+getSS (A.Keyword    s) = s
+getSS (A.Operator   s) = s
+getSS _ = undefined
+--
 -- Misc. functions --
 isIdentifier (A.TokIdent _) = True
 isIdentifier _ = False
+
+isKeyword (A.Keyword _) = True
+isKeyword _ = False
 
 isPeriod A.Period = True
 isPeriod _ = False

@@ -38,3 +38,24 @@ data Ident = Ident String
 --   e.g foo.bar.baz
 data Name = Name [Ident]
           DERIVE
+
+-- | Type annotations [type]
+data Type = PrimType PrimType
+          | RefType RefType
+          DERIVE
+
+-- | Primitive types [primType]
+data PrimType
+    = BooleanT
+    | ByteT
+    | ShortT
+    | IntT
+    | LongT
+    | CharT
+    | FloatT
+    | DoubleT
+    DERIVE
+
+-- | Reference types [refType]
+data RefType = Foo
+             DERIVE
