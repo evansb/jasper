@@ -51,6 +51,14 @@ isOperator  _ = False
 isComma A.Comma = True
 isComma _ = False
 
+isLSquare A.LSquare = True
+isLSquare _ = False
+
+isRSquare A.RSquare = True
+isRSquare _ = False
+
 lessThan = satisfy (\x -> isOperator x && x === "<")
 greaterThan = satisfy (\x -> isOperator x && x === ">")
 comma = satisfy isComma
+lSquare = satisfy isLSquare
+rSquare = satisfy isRSquare

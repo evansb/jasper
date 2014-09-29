@@ -56,12 +56,15 @@ data PrimType
     | DoubleT
     DERIVE
 
+
+type ClassType = (Ident, Maybe [TypeArg])
+
 -- | Reference types [refType]
-data RefType = ClassOrInterfaceT [(Ident, [TypeArg])]
-             | ArrayT ArrayT
+data RefType = ClassOrInterfaceType [ClassType]
+             | ArrayType ArrayType
              DERIVE
 
-data TypeArg = ActualT RefType
+data TypeArg = ActualType RefType
              | Wildcard (Maybe WildcardBound)
              DERIVE
 
@@ -69,6 +72,6 @@ data WildcardBound = SuperWB RefType
                    | ExtendsWB RefType
                    DERIVE
 
-data ArrayT = PrimArrayT
-            | RefArrayT
-            DERIVE
+data ArrayType = PrimArrayT PrimType
+               | RefArrayT RefType
+               DERIVE

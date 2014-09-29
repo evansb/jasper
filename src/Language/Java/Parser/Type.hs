@@ -3,15 +3,14 @@ module Language.Java.Parser.Type where
 
 import qualified Data.Set as S hiding (map)
 
-import Control.Applicative ((<$>), (*>))
+import Control.Applicative ((<$>), (*>), (<*), (<*>))
 
 import Text.Parsec.Combinator
 import Text.Parsec.Prim
-import Text.Parsec.Error
 
 import Language.Java.Parser.Core
+import Language.Java.Parser.Basic
 import Language.Java.AST
-    (PrimType(..), RefType(..), TypeArg(..), WildcardBound(..))
 
 -- | Primitive types
 primType :: JParser PrimType
@@ -27,17 +26,31 @@ primType = (do
       "float"   -> FloatT
       "double"  -> DoubleT
       _         -> BooleanT)
-    <?> "primitive types"
+    <?> "primitive type"
 
 -- | Reference types
 refType :: JParser RefType
-refType = undefined
+refType = (try classOrInterfaceT <|> arrayType)
+       <?> "reference type"
+
+classOrInterfaceT :: JParser RefType
+classOrInterfaceT = ClassOrInterfaceType <$> many1 classType
+
+classType :: JParser ClassType
+classType = (,) <$> ident <*> optionMaybe typeArgs
+         <?> "class type"
+
+arrayType :: JParser RefType
+arrayType = ArrayType <$>
+    (try (PrimArrayT <$> primType <* lSquare <* rSquare)
+    <|> RefArrayT <$> classOrInterfaceT <* lSquare <* rSquare)
 
 typeArgs :: JParser [TypeArg]
-typeArgs = between lessThan greaterThan $ do
+typeArgs = between lessThan greaterThan (do
     must <- typeArg
     opt <- many (comma *> typeArg)
-    return (must : opt)
+    return (must : opt))
+    <?> "type arguments"
 
 typeArg :: JParser TypeArg
 typeArg = do
@@ -45,9 +58,10 @@ typeArg = do
     let wc x = isOperator x && (x === "?")
     tok <- try (getSS <$> satisfy wc) <|> return ""
     if null tok then
-        ActualT <$> refType
+        ActualType <$> refType
     else
         Wildcard <$> optionMaybe wildcardBound
+    ; <?> "type argument"
 
 -- | Wildcard bounds
 wildcardBound :: JParser WildcardBound
@@ -58,6 +72,7 @@ wildcardBound = do
     return $ if tok === "super"
                  then SuperWB tRefType
                  else ExtendsWB tRefType
+    ; <?> "wildcard bound"
 
 -- Misc functions
 primitiveTypes = S.fromList
