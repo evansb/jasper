@@ -11,12 +11,16 @@ import Language.Java.Parser.Basic
 import Language.Java.AST
 
 expression :: JParser Expression
-expression = between lParen rParen (choice [
+expression = choice [
         Literal <$> literal
      ,  typeNameDotClass
      ,  voidDotClass
      ,  this
-     ]) <?> "expression"
+     ,  expressionParen
+     ] <?> "expression"
+
+expressionParen :: JParser Expression
+expressionParen = between lParen rParen expression
 
 literal :: JParser Literal
 literal = do
