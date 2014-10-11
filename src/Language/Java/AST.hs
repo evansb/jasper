@@ -36,7 +36,7 @@ data Ident = Ident String
 
 -- | Identifiers separated by period [name]
 --   e.g foo.bar.baz
-data Name = Name [Ident]
+data TypeName = TypeName [Ident]
           DERIVE
 
 -- | Type annotations [type]
@@ -74,3 +74,26 @@ data WildcardBound = SuperWB RefType
 data ArrayType = PrimArrayT PrimType
                | RefArrayT RefType
                DERIVE
+
+-- | Literals
+data Literal = IntegerLiteral Integer
+             | FloatingPointLiteral String
+             | BooleanLiteral Bool
+             | CharacterLiteral Char
+             | StringLiteral String
+             | NullLiteral
+             DERIVE
+
+-- | Expressions
+data Expression = Literal Literal
+                -- | foo.class
+                | TypeNameDotClass TypeName
+                -- | foo[].class
+                | TypeNameArrDotClass TypeName
+                -- | void.class
+                | VoidDotClass
+                -- | this
+                | This
+                -- | foo.this
+                | TypeNameDotThis TypeName
+                DERIVE

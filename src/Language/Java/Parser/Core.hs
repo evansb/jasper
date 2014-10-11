@@ -57,9 +57,18 @@ isLSquare _ = False
 isRSquare A.RSquare = True
 isRSquare _ = False
 
+isLParen A.LParen = True
+isLParen _ = False
+
+isRParen A.RParen = True
+isRParen _ = False
+
 lessThan = satisfy (\x -> isOperator x && x === "<")
 greaterThan = satisfy (\x -> isOperator x && x === ">")
 comma = satisfy isComma
 lSquare = satisfy isLSquare
 rSquare = satisfy isRSquare
+lParen = satisfy isLParen
+rParen = satisfy isRParen
 dot = satisfy isPeriod
+keyword kwd = satisfy (\x -> isKeyword x && (getSS x == kwd))

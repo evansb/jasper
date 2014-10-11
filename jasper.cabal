@@ -17,6 +17,7 @@ library
         Language.Java.Parser.Core
         Language.Java.Parser.Basic
         Language.Java.Parser.Type
+        Language.Java.Parser.Expression
         Language.Java.Lexer
         Language.Java.Parser
         Language.Java.AST

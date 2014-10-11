@@ -20,6 +20,6 @@ spec = describe "Basic Parser" $ do
             ident `shouldFailOnJ` reservedNames
         it "Should be able to parse names" $ do
             let test1 = "foo.bar.baz"
-            let exp1 = Name (map Ident ["foo", "bar", "baz"])
-            name `shouldParseJ` [test1 `to` exp1]
-            name `shouldFailOnJ` [".Boo","Boo."]
+            let exp1 = TypeName (map Ident ["foo", "bar", "baz"])
+            typeName `shouldParseJ` [test1 `to` exp1]
+            typeName `shouldFailOnJ` [".Boo","Boo."]
