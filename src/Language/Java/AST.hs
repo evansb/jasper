@@ -89,7 +89,7 @@ data Expression = Literal Literal
                 -- | foo.class
                 | TypeNameDotClass TypeName
                 -- | foo[][].class
-                | TypeNameArrDotClass TypeName
+                | TypeNameArrDotClass Int TypeName
                 -- | void.class
                 | VoidDotClass
                 -- | this

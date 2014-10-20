@@ -2,7 +2,6 @@
 module Language.Java.Parser.Expression where
 
 import Control.Applicative ((<$>), (<*))
-import Data.Maybe (isNothing)
 import Text.Parsec.Combinator
 import Text.Parsec.Prim
 
@@ -40,12 +39,12 @@ literal = do
 typeNameDotClass :: JParser Expression
 typeNameDotClass = do
         typeName0 <- typeNameDot
-        arr <- optionMaybe (lSquare >> rSquare)
+        arr <- many (lSquare >> rSquare)
         _ <- keyword "class"
-        return $ if isNothing arr then
+        return $ if null arr then
             TypeNameDotClass typeName0
         else
-            TypeNameArrDotClass typeName0
+            TypeNameArrDotClass (length arr) typeName0
 
 voidDotClass :: JParser Expression
 voidDotClass =
