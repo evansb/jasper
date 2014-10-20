@@ -20,7 +20,7 @@ javaLanguage = javaStyle {
     reservedOpNames   = Data.Misc.reservedOpNames,
     caseSensitive     = True,
     opStart           = oneOf "!%&*+/<=>?^|-:.",
-    opLetter          = oneOf "&*+/<=>?^|-"
+    opLetter          = oneOf "&*+/<=>^|-"
 }
 
 javaLexer :: GenTokenParser String u Identity
@@ -161,11 +161,13 @@ boolLiteral =
 
 opLiteral :: Parser String
 opLiteral = do
-    o <- many1 (opStart javaLanguage)
+    ohead <- opStart javaLanguage
+    obody <- many $ opLetter javaLanguage
+    let o = ohead : obody
     if Data.Misc.isOperator o then
         return o
     else
-        parserFail ("Unknown operator" ++ o)
+        unexpected ("Unknown operator" ++ o)
 
 (<=+) :: (a -> T) -> Parser a -> Parser Token
 t <=+ p = do
