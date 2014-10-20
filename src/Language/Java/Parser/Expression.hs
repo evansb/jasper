@@ -15,6 +15,7 @@ expression = choice (map try [
      ,  this
      ,  typeNameDotThis
      ,  typeNameDotClass
+     ,  typeNameArrDotClass
      ,  voidDotClass
      ,  expressionParen
      ]) <?> "expression"
@@ -39,12 +40,15 @@ literal = do
 typeNameDotClass :: JParser Expression
 typeNameDotClass = do
         typeName0 <- typeNameDot
-        arr <- many (lSquare >> rSquare)
         _ <- keyword "class"
-        return $ if null arr then
-            TypeNameDotClass typeName0
-        else
-            TypeNameArrDotClass (length arr) typeName0
+        return $ TypeNameDotClass typeName0
+
+typeNameArrDotClass :: JParser Expression
+typeNameArrDotClass = do
+        typeName0 <- typeName
+        arr <- many (lSquare >> rSquare)
+        _ <- dot >> keyword "class"
+        return $ TypeNameArrDotClass (length arr) typeName0
 
 voidDotClass :: JParser Expression
 voidDotClass =

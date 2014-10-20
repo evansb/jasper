@@ -21,11 +21,18 @@ spec = describe "Expression Parser" $ do
                 [   "Mocha.Latte.class" `to` TypeNameDotClass
                                         (TypeName [Ident "Mocha",
                                                    Ident "Latte"])
-                  , "void.class"  `to` VoidDotClass
-                  , "this"  `to` This
-                  , "Mocha.Latte.this" `to` TypeNameDotThis
+                  , "Mocha.Latte[][][].class" `to` TypeNameArrDotClass 3
                                         (TypeName [Ident "Mocha",
                                                    Ident "Latte"])
                 ]
             expression `shouldFailOnJ`
                 [ "void.void", "Mocha.latte"]
+        it "Should be able to parse typename followed by dot this" $ 
+            expression `shouldParseJ`
+                [ "Mocha.Latte.this" `to` TypeNameDotThis
+                                        (TypeName [Ident "Mocha",
+                                                   Ident "Latte"])]
+        it "Should be able to parse void dot class" $
+            expression `shouldParseJ` ["void.class" `to` VoidDotClass]
+        it "Should be able to parse this" $
+            expression `shouldParseJ`  ["this" `to` This]
