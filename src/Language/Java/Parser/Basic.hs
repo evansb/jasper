@@ -10,4 +10,7 @@ ident :: JParser Ident
 ident = Ident <$> (satisfy isIdentifier >>= getS)
 
 typeName :: JParser TypeName
-typeName = TypeName <$> ident `sepBy1` satisfy isPeriod
+typeName = TypeName <$> ident `sepBy1` dot
+
+typeNameDot :: JParser TypeName
+typeNameDot = TypeName <$> ident `sepEndBy1` dot

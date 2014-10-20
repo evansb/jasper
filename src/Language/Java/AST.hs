@@ -88,7 +88,7 @@ data Literal = IntegerLiteral Integer
 data Expression = Literal Literal
                 -- | foo.class
                 | TypeNameDotClass TypeName
-                -- | foo[].class
+                -- | foo[][].class
                 | TypeNameArrDotClass TypeName
                 -- | void.class
                 | VoidDotClass

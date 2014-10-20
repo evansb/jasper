@@ -1,7 +1,7 @@
 {-# LANGUAGE  DoAndIfThenElse #-}
 module Language.Java.Parser.Expression where
 
-import Control.Applicative ((<$>), (*>), (<*), (<*>))
+import Control.Applicative ((<$>), (<*))
 import Data.Maybe (isNothing)
 import Text.Parsec.Combinator
 import Text.Parsec.Prim
@@ -11,13 +11,14 @@ import Language.Java.Parser.Basic
 import Language.Java.AST
 
 expression :: JParser Expression
-expression = choice [
+expression = choice (map try [
         Literal <$> literal
+     ,  this
+     ,  typeNameDotThis
      ,  typeNameDotClass
      ,  voidDotClass
-     ,  this
      ,  expressionParen
-     ] <?> "expression"
+     ]) <?> "expression"
 
 expressionParen :: JParser Expression
 expressionParen = between lParen rParen expression
@@ -27,8 +28,9 @@ literal = do
        tok <- getT
        case tok of
         TokInt t -> return $ IntegerLiteral t
-        TokLong t -> return $ IntegerLiteral t
+        TokFloat s -> return $ FloatingPointLiteral s
         TokDouble s -> return $ FloatingPointLiteral s
+        TokLong t -> return $ IntegerLiteral t
         TokChar s -> return $ CharacterLiteral s
         TokString s -> return $ StringLiteral s
         TokNull -> return NullLiteral
@@ -37,9 +39,9 @@ literal = do
 
 typeNameDotClass :: JParser Expression
 typeNameDotClass = do
-        typeName0 <- typeName
+        typeName0 <- typeNameDot
         arr <- optionMaybe (lSquare >> rSquare)
-        _ <- dot *> keyword "class"
+        _ <- keyword "class"
         return $ if isNothing arr then
             TypeNameDotClass typeName0
         else
@@ -49,6 +51,11 @@ voidDotClass :: JParser Expression
 voidDotClass =
         keyword "void" >> dot >> keyword "class" >>
         return VoidDotClass
+
+typeNameDotThis :: JParser Expression
+typeNameDotThis =
+    TypeNameDotThis <$>
+        (typeNameDot <* keyword "this")
 
 this :: JParser Expression
 this = keyword "this" >> return This
