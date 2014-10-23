@@ -12,7 +12,7 @@ import Language.Java.Parser.Core
 import Language.Java.Parser.Basic
 import Language.Java.AST
 
--- Java types
+-- | Java types
 type_ :: JParser Type
 type_ = try (PrimType <$> primType)
      <|> (RefType <$> refType)
@@ -59,7 +59,6 @@ typeArgs = between lessThan greaterThan (do
 
 typeArg :: JParser TypeArg
 typeArg = do
-    -- Check if there is an ?
     let wc x = isOperator x && (x === "?")
     tok <- try (getSS <$> satisfy wc) <|> return ""
     if null tok then
@@ -77,9 +76,9 @@ wildcardBound = do
     return $ if tok === "super"
                  then SuperWB tRefType
                  else ExtendsWB tRefType
-    ; <?> "wildcard bound"
+    ; <?> "wild card bound"
 
--- Misc functions
+-- | Miscellaneous functions
 primitiveTypes = S.fromList
       [ "byte" , "short" , "int" , "long" , "char",
         "float" , "double" , "boolean"]

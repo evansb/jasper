@@ -9,6 +9,7 @@ import Language.Java.Parser.Core
 import Language.Java.Parser.Basic
 import Language.Java.AST
 
+-- | Java Expressions
 expression :: JParser Expression
 expression = choice (map try [
         Literal <$> literal
@@ -20,9 +21,11 @@ expression = choice (map try [
      ,  expressionParen
      ]) <?> "expression"
 
+-- | Expression surrounded by parenthesis
 expressionParen :: JParser Expression
 expressionParen = between lParen rParen expression
 
+-- | Literals
 literal :: JParser Literal
 literal = do
        tok <- getT
@@ -37,28 +40,37 @@ literal = do
         s -> unexpected (show s)
        <?> "literal"
 
+-- | Java name followed by a .class
+-- | e.g foo.bar.qux.class
 typeNameDotClass :: JParser Expression
 typeNameDotClass = do
         typeName0 <- typeNameDot
         _ <- keyword "class"
         return $ TypeNameDotClass typeName0
+        <?> "typename.class"
 
+-- | Java array name followed by a .class
 typeNameArrDotClass :: JParser Expression
 typeNameArrDotClass = do
         typeName0 <- typeName
         arr <- many (lSquare >> rSquare)
         _ <- dot >> keyword "class"
         return $ TypeNameArrDotClass (length arr) typeName0
+        <?> "typename[].class"
 
+-- | Parses void.class
 voidDotClass :: JParser Expression
-voidDotClass =
-        keyword "void" >> dot >> keyword "class" >>
-        return VoidDotClass
+voidDotClass = do {
+        keyword "void"; dot; keyword "class";
+        return VoidDotClass; }
+        <?> "void.class"
 
+-- | Java name followed by this
+-- | e.g foo.bar.this
 typeNameDotThis :: JParser Expression
 typeNameDotThis =
-    TypeNameDotThis <$>
-        (typeNameDot <* keyword "this")
+    TypeNameDotThis <$> (typeNameDot <* keyword "this")
 
+-- | The literal this expression
 this :: JParser Expression
 this = keyword "this" >> return This

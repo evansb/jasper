@@ -27,7 +27,7 @@ spec = describe "Expression Parser" $ do
                 ]
             expression `shouldFailOnJ`
                 [ "void.void", "Mocha.latte"]
-        it "Should be able to parse typename followed by dot this" $ 
+        it "Should be able to parse typename followed by dot this" $
             expression `shouldParseJ`
                 [ "Mocha.Latte.this" `to` TypeNameDotThis
                                         (TypeName [Ident "Mocha",

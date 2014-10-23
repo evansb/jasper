@@ -1,4 +1,3 @@
-
 module Language.Java.Lexer where
 
 import Control.Applicative ((<*), (*>))

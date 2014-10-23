@@ -5,3 +5,5 @@ java-src/
 .cabal-sandbox/
 cabal.sandbox.config
 .ghci
+/.dist-buildwrapper/
+/jasper.tar.gz
