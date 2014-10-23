@@ -14,16 +14,17 @@ spec = describe "Expression Parser" $ do
                 [   "1230"      `to` Literal (IntegerLiteral 1230)
                   , "\"short\"" `to` Literal (StringLiteral "short")
                   , "20e3"      `to` Literal (FloatingPointLiteral "20e3")
-                  , "'a'"    `to` Literal (CharacterLiteral 'a')]
+                  , "'a'"       `to` Literal (CharacterLiteral 'a')]
             expression `shouldFailOnJ` [ "\"xxx", "'Hello'" ]
         it "Should be able to parse typename followed by dot class" $ do
             expression `shouldParseJ`
                 [   "Mocha.Latte.class" `to` TypeNameDotClass
                                         (TypeName [Ident "Mocha",
                                                    Ident "Latte"])
-                  , "Mocha.Latte[][][].class" `to` TypeNameArrDotClass 3
+                  , "Mocha.Latte[][][].class" `to` TypeNameArrDotClass
                                         (TypeName [Ident "Mocha",
                                                    Ident "Latte"])
+                                        3
                 ]
             expression `shouldFailOnJ`
                 [ "void.void", "Mocha.latte"]

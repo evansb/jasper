@@ -1,7 +1,7 @@
 {-# LANGUAGE  DoAndIfThenElse #-}
 module Language.Java.Parser.Expression where
 
-import Control.Applicative ((<$>), (<*))
+import Control.Applicative ((<$>), (<*), (<*>), pure)
 import Text.Parsec.Combinator
 import Text.Parsec.Prim
 
@@ -12,7 +12,7 @@ import Language.Java.AST
 -- | Java Expressions
 expression :: JParser Expression
 expression = choice (map try [
-        Literal <$> literal
+        literal
      ,  this
      ,  typeNameDotThis
      ,  typeNameDotClass
@@ -26,8 +26,8 @@ expressionParen :: JParser Expression
 expressionParen = between lParen rParen expression
 
 -- | Literals
-literal :: JParser Literal
-literal = do
+literal :: JParser Expression
+literal = Literal <$> do
        tok <- getT
        case tok of
         TokInt t -> return $ IntegerLiteral t
@@ -43,36 +43,35 @@ literal = do
 -- | Java name followed by a .class
 -- | e.g foo.bar.qux.class
 typeNameDotClass :: JParser Expression
-typeNameDotClass = do
-        typeName0 <- typeNameDot
-        _ <- keyword "class"
-        return $ TypeNameDotClass typeName0
+typeNameDotClass = TypeNameDotClass
+        <$> typeNameDot
+        <* keyword "class"
         <?> "typename.class"
 
 -- | Java array name followed by a .class
 typeNameArrDotClass :: JParser Expression
-typeNameArrDotClass = do
-        typeName0 <- typeName
-        arr <- many (lSquare >> rSquare)
-        _ <- dot >> keyword "class"
-        return $ TypeNameArrDotClass (length arr) typeName0
+typeNameArrDotClass = TypeNameArrDotClass
+        <$> typeName
+        <*> (length <$> many (lSquare >> rSquare))
+        <*  dot <* keyword "class"
         <?> "typename[].class"
 
 -- | Parses void.class
 voidDotClass :: JParser Expression
-voidDotClass = do {
-        keyword "void"; dot; keyword "class";
-        return VoidDotClass; }
+voidDotClass = pure VoidDotClass
+        <* keyword "void"
+        <* dot <* keyword "class"
         <?> "void.class"
 
 -- | Java name followed by this
 -- | e.g foo.bar.this
 typeNameDotThis :: JParser Expression
-typeNameDotThis =
-    TypeNameDotThis <$> (typeNameDot <* keyword "this")
+typeNameDotThis = TypeNameDotThis
+        <$> typeNameDot 
+        <* keyword "this"
 
 -- | The literal this expression
 this :: JParser Expression
-this = keyword "this" >> return This
+this = pure This <* keyword "this"
 
 

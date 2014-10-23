@@ -111,7 +111,7 @@ data Expression = Literal Literal
                 -- | foo.class
                 | TypeNameDotClass TypeName
                 -- | foo[][].class
-                | TypeNameArrDotClass Int TypeName
+                | TypeNameArrDotClass TypeName Int
                 -- | void.class
                 | VoidDotClass
                 -- | this
