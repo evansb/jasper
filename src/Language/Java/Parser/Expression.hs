@@ -1,12 +1,13 @@
 {-# LANGUAGE  DoAndIfThenElse #-}
 module Language.Java.Parser.Expression where
 
-import Control.Applicative ((<$>), (<*), (<*>), pure)
+import Control.Applicative ((<$>), (<*), (*>), (<*>), pure)
 import Text.Parsec.Combinator
 import Text.Parsec.Prim
 
 import Language.Java.Parser.Core
 import Language.Java.Parser.Basic
+import Language.Java.Parser.Type (typeArg)
 import Language.Java.AST
 
 -- | Java Expressions
@@ -74,4 +75,42 @@ typeNameDotThis = TypeNameDotThis
 this :: JParser Expression
 this = pure This <* keyword "this"
 
+-- | Class instance creation expression
+classInstanceCreationExpression :: JParser Expression
+classInstanceCreationExpression = ClassInstanceCreationExpression <$>
+     choice (map try [withIdentifier, withExpressionName, withPrimary])
 
+withIdentifier :: JParser ClassInstanceCreation         
+withIdentifier = WithIdentifier
+        <$> (keyword "new" *> optionMaybe typeArg)
+        <*> ident
+        <*> typeArgOrDiamond
+        <*> between lParen rParen (optionMaybe argumentList)
+        <*> optionMaybe classBody
+
+withExpressionName :: JParser ClassInstanceCreation
+withExpressionName = WithExpressionName
+        <$> typeName
+        <*> (dot *> keyword "new" *> optionMaybe typeArg)
+        <*> typeArgOrDiamond
+        <*> between lParen rParen (optionMaybe argumentList)
+        <*> optionMaybe classBody
+
+withPrimary :: JParser ClassInstanceCreation
+withPrimary = WithPrimary
+        <$> expression
+        <*> (dot *> keyword "new" *> optionMaybe typeArg)
+        <*> ident
+        <*> typeArgOrDiamond
+        <*> between lParen rParen (optionMaybe argumentList)
+        <*> optionMaybe classBody
+
+typeArgOrDiamond :: JParser TypeArgOrDiam
+typeArgOrDiamond =  try (TypeArg <$> typeArg)
+             <|> (pure Diamond <* lessThan <* greaterThan)
+
+argumentList :: JParser ArgList
+argumentList = undefined
+
+classBody :: JParser ClassBody
+classBody = undefined

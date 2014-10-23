@@ -3,7 +3,7 @@ module Language.Java.AST where
 
 import Text.Parsec
 
-#define DERIVE deriving(Eq,Show)
+#define PRODUCTION deriving(Eq, Show)
 
 type Token = (T, SourcePos)
 data T  = Keyword    String
@@ -25,23 +25,23 @@ data T  = Keyword    String
         | SemiColon  | Comma
         | Period     | TPeriod
         | At         | DColon
-        DERIVE
+        PRODUCTION
 
 -- | Names and Identifiers
 
 -- | Java Identifier [ident]
 data Ident = Ident String
-           DERIVE
+           PRODUCTION
 
 -- | Identifiers separated by period [name]
 --   e.g foo.bar.baz
 data TypeName = TypeName [Ident]
-          DERIVE
+          PRODUCTION
 
 -- | Type annotations [type_]
 data Type = PrimType PrimType
           | RefType RefType
-          DERIVE
+          PRODUCTION
 
 -- | Primitive types [primType]
 data PrimType
@@ -53,60 +53,62 @@ data PrimType
     | CharT
     | FloatT
     | DoubleT
-    DERIVE
+    PRODUCTION
 
 type ClassType = (Ident, Maybe [TypeArg])
 
 -- | Reference types [refType]
 data RefType = ClassOrInterfaceType [ClassType]
              | ArrayType ArrayType
-             DERIVE
+             PRODUCTION
 
 data TypeArg = ActualType RefType
              | Wildcard (Maybe WildcardBound)
-             DERIVE
+             PRODUCTION
 
 data WildcardBound = SuperWB RefType
                    | ExtendsWB RefType
-                   DERIVE
+                   PRODUCTION
 
 data ArrayType = PrimArrayT PrimType
                | RefArrayT RefType
-               DERIVE
+               PRODUCTION
 
 -- | 7. Packages
 
 data CompilationUnit = CompilationUnit (Maybe PackageDeclaration) 
                                 [ImportDeclaration] [TypeDeclaration]
-                     DERIVE
+                     PRODUCTION
 
 data PackageDeclaration = PackageDeclaration [PackageModifier] TypeName
-                        DERIVE
+                        PRODUCTION
 
 data PackageModifier = PackageModifier
-                     DERIVE
+                     PRODUCTION
 
 data ImportDeclaration = SingleTypeImportDeclaration TypeName
                        | TypeImportOnDemandDeclaration TypeName
                        | SingleStaticImportDeclaration TypeName Ident
                        | StaticImportOnDemandDeclaration TypeName
-                       DERIVE
+                       PRODUCTION
 
 data TypeDeclaration = ClassDeclaration
                      | InterfaceDeclaration
                      | EmptyStatement
-                     DERIVE
+                     PRODUCTION
 
--- | Literals
+-- | 15. Expressions
+
+-- | Literals [literal]
 data Literal = IntegerLiteral Integer
              | FloatingPointLiteral String
              | BooleanLiteral Bool
              | CharacterLiteral Char
              | StringLiteral String
              | NullLiteral
-             DERIVE
+             PRODUCTION
 
--- | Expressions
+-- | Expressions [expression]
 data Expression = Literal Literal
                 -- | foo.class
                 | TypeNameDotClass TypeName
@@ -118,4 +120,30 @@ data Expression = Literal Literal
                 | This
                 -- | foo.this
                 | TypeNameDotThis TypeName
-                DERIVE
+                -- | Instant class creation
+                | ClassInstanceCreationExpression ClassInstanceCreation
+                PRODUCTION
+
+-- | Class instance creation [classInstanceCreation]
+-- | e.g  new Comparable<String> {
+-- |            <Class Body>
+-- |      }
+data ClassInstanceCreation =
+       WithIdentifier (Maybe TypeArg) Ident
+                TypeArgOrDiam (Maybe ArgList) (Maybe ClassBody)
+     | WithExpressionName TypeName (Maybe TypeArg)
+                TypeArgOrDiam (Maybe ArgList) (Maybe ClassBody)
+     | WithPrimary Expression (Maybe TypeArg) Ident
+                TypeArgOrDiam (Maybe ArgList) (Maybe ClassBody)
+     PRODUCTION
+ 
+data TypeArgOrDiam = TypeArg TypeArg
+                   | Diamond
+                   PRODUCTION
+
+data ClassBody = ClassBody
+               PRODUCTION
+
+data ArgList = ArgList
+               PRODUCTION
+
