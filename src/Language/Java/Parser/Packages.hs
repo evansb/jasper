@@ -57,7 +57,7 @@ typeImportOnDemandDeclaration = TypeImportOnDemandDeclaration
 
 singleStaticImportDeclaration :: JParser ImportDeclaration
 singleStaticImportDeclaration = do 
-        tn <- (keyword "import" *> keyword "static" *> typeNameDot <* semiColon)
+        tn <- keyword "import" *> keyword "static" *> typeNameDot <* semiColon
         case tn of
             TypeName s@(_:_:_) -> do
                     let (x,y) = splitAt (length s - 1) s
@@ -66,8 +66,8 @@ singleStaticImportDeclaration = do
 
 staticImportOnDemandDeclaration :: JParser ImportDeclaration 
 staticImportOnDemandDeclaration = StaticImportOnDemandDeclaration
-        <$> ((keyword "import" *> keyword "static" *> typeNameDot <*
-            (star <* semiColon)))
+        <$> (keyword "import" *> keyword "static" *> typeNameDot <*
+            (star <* semiColon))
 
 typeDeclaration :: JParser TypeDeclaration
 typeDeclaration = undefined
