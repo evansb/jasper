@@ -55,3 +55,5 @@ spec = describe "Lexer" $ do
                     , "0oFFF"
                     , "0xx"
                 ]
+        it "Should be able to parse >> and << as two operators" $
+            L.opLiteral `shouldParse` [ "<<" `to` "<", ">>" `to` ">"]

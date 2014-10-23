@@ -21,3 +21,4 @@ spec = describe "Types Parser" $
                   , "double"  `to` DoubleT
                   , "boolean" `to` BooleanT ]
             primType `shouldFailOnJ` [ "Boolean", "Integer", "foo" ]
+            

@@ -1,5 +1,4 @@
 
-
 module Test.Language.Java.BasicParserSpec where
 
 import Test.Hspec

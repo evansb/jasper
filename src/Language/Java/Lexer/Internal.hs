@@ -20,7 +20,7 @@ javaLanguage = javaStyle {
     reservedOpNames   = Data.Misc.reservedOpNames,
     caseSensitive     = True,
     opStart           = oneOf "!%&*+/<=>?^|-:.",
-    opLetter          = oneOf "&*+/<=>^|-"
+    opLetter          = oneOf "&*+/=^|-"
 }
 
 javaLexer :: GenTokenParser String u Identity
