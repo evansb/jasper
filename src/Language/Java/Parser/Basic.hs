@@ -8,7 +8,7 @@ import Language.Java.AST (Ident(..), TypeName(..))
 
 -- | Java Identifier
 ident :: JParser Ident
-ident = Ident <$> (satisfy isIdentifier >>= (return . getSS))
+ident = Ident <$> (getSS <$> satisfy isIdentifier)
 
 -- | Java Name
 typeName :: JParser TypeName
