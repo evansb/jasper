@@ -11,7 +11,8 @@ import Language.Java.AST (
         PackageDeclaration(..),
         PackageModifier(..),
         ImportDeclaration(..),
-        TypeDeclaration(..))
+        TypeDeclaration(..),
+        TypeName(..))
 
 -- | Compilation unit
 compilationUnit :: JParser CompilationUnit
@@ -25,7 +26,7 @@ compilationUnit = CompilationUnit
 packageDeclaration :: JParser PackageDeclaration
 packageDeclaration = PackageDeclaration
         <$> many packageModifier
-        <*> typeName 
+        <*> typeName
         <*  semiColon
         <?> "package declaration"        
 
@@ -52,17 +53,21 @@ singleTypeImportDeclaration = SingleTypeImportDeclaration
 
 typeImportOnDemandDeclaration :: JParser ImportDeclaration
 typeImportOnDemandDeclaration = TypeImportOnDemandDeclaration
-        <$> (keyword "import" *> typeName <* dot <* star <* semiColon)
+        <$> (keyword "import" *> typeNameDot <* star <* semiColon)
 
 singleStaticImportDeclaration :: JParser ImportDeclaration
-singleStaticImportDeclaration = SingleStaticImportDeclaration 
-        <$> (keyword "import" *> keyword "static" *> typeName)
-        <*> (dot *> ident)
- 
+singleStaticImportDeclaration = do 
+        tn <- (keyword "import" *> keyword "static" *> typeNameDot <* semiColon)
+        case tn of
+            TypeName s@(_:_:_) -> do
+                    let (x,y) = splitAt (length s - 1) s
+                    return $ SingleStaticImportDeclaration (TypeName x) (head y)
+            _ -> unexpected "Cannot import whole class"
+
 staticImportOnDemandDeclaration :: JParser ImportDeclaration 
 staticImportOnDemandDeclaration = StaticImportOnDemandDeclaration
-        <$> ((keyword "import" *> keyword "static" *> typeName <*
-            (dot <* star <* semiColon)))
+        <$> ((keyword "import" *> keyword "static" *> typeNameDot <*
+            (star <* semiColon)))
 
 typeDeclaration :: JParser TypeDeclaration
 typeDeclaration = undefined
