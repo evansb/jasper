@@ -27,10 +27,9 @@ data T  = Keyword    String
         | At         | DColon
         DERIVE
 
---- | Names and Identifiers
+-- | Names and Identifiers
 
--- | A single identifier [ident]
----  e.g foo
+-- | Java Identifier [ident]
 data Ident = Ident String
            DERIVE
 
@@ -39,7 +38,7 @@ data Ident = Ident String
 data TypeName = TypeName [Ident]
           DERIVE
 
--- | Type annotations [type]
+-- | Type annotations [type_]
 data Type = PrimType PrimType
           | RefType RefType
           DERIVE
@@ -74,6 +73,29 @@ data WildcardBound = SuperWB RefType
 data ArrayType = PrimArrayT PrimType
                | RefArrayT RefType
                DERIVE
+
+-- | 7. Packages
+
+data CompilationUnit = CompilationUnit (Maybe PackageDeclaration) 
+                                [ImportDeclaration] [TypeDeclaration]
+                     DERIVE
+
+data PackageDeclaration = PackageDeclaration [PackageModifier] TypeName
+                        DERIVE
+
+data PackageModifier = PackageModifier
+                     DERIVE
+
+data ImportDeclaration = SingleTypeImportDeclaration TypeName
+                       | TypeImportOnDemandDeclaration TypeName
+                       | SingleStaticImportDeclaration TypeName Ident
+                       | StaticImportOnDemandDeclaration TypeName
+                       DERIVE
+
+data TypeDeclaration = ClassDeclaration
+                     | InterfaceDeclaration
+                     | EmptyStatement
+                     DERIVE
 
 -- | Literals
 data Literal = IntegerLiteral Integer

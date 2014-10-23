@@ -60,12 +60,18 @@ isLParen _ = False
 isRParen A.RParen = True
 isRParen _ = False
 
+isSemiColon A.SemiColon = True
+isSemiColon _ = False
+
 lessThan = satisfy (\x -> isOperator x && x === "<")
 greaterThan = satisfy (\x -> isOperator x && x === ">")
+star = satisfy (\x -> isOperator x && x === "*")
+
 comma = satisfy isComma
 lSquare = satisfy isLSquare
 rSquare = satisfy isRSquare
 lParen = satisfy isLParen
 rParen = satisfy isRParen
+semiColon = satisfy isSemiColon
 dot = satisfy isPeriod
 keyword kwd = satisfy (\x -> isKeyword x && (getSS x == kwd))

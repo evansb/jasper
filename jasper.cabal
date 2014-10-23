@@ -8,6 +8,8 @@ maintainer:          evanlhoini@gmail.com
 category:            Language
 build-type:          Simple
 cabal-version:       >=1.8
+license-file:        LICENSE
+stability:           unstable
 
 library
     hs-source-dirs:  src
@@ -36,6 +38,7 @@ test-suite jasper-test-suite
     main-is:        Spec.hs
     build-depends:  base >=4 && < 5
                  ,  hspec
+                 ,  hspec-discover
                  ,  parsec
                  ,  jasper
 
