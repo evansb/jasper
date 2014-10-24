@@ -63,15 +63,26 @@ isRParen _ = False
 isSemiColon A.SemiColon = True
 isSemiColon _ = False
 
-lessThan = satisfy (\x -> isOperator x && x === "<")
-greaterThan = satisfy (\x -> isOperator x && x === ">")
-star = satisfy (\x -> isOperator x && x === "*")
+operator s = satisfy (\x -> isOperator x && x === s)
 
-comma = satisfy isComma
-lSquare = satisfy isLSquare
-rSquare = satisfy isRSquare
-lParen = satisfy isLParen
-rParen = satisfy isRParen
-semiColon = satisfy isSemiColon
-dot = satisfy isPeriod
-keyword kwd = satisfy (\x -> isKeyword x && (getSS x == kwd))
+lessThan        = operator "<"
+greaterThan     = operator ">"
+lessThanEq      = operator "<="
+greaterThanEq   = operator ">="
+star            = operator "*"
+
+multOp          = operator "*"
+addOp           = operator "+"
+incOp           = operator "++"
+minOp           = operator "-"
+decOp           = operator "--"
+
+comma           = satisfy isComma
+lSquare         = satisfy isLSquare
+rSquare         = satisfy isRSquare
+lParen          = satisfy isLParen
+rParen          = satisfy isRParen
+semiColon       = satisfy isSemiColon
+dot             = satisfy isPeriod
+
+keyword kwd     = satisfy (\x -> isKeyword x && (getSS x == kwd))

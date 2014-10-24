@@ -3,7 +3,7 @@ module Language.Java.Parser.Type where
 
 import qualified Data.Set as S hiding (map)
 
-import Control.Applicative ((<$>), (*>), (<*), (<*>))
+import Control.Applicative ((<$>), (*>), (<*), (<*>), pure)
 
 import Text.Parsec.Combinator
 import Text.Parsec.Prim
@@ -45,22 +45,24 @@ classType :: JParser ClassType
 classType = (,) <$> ident <*> optionMaybe typeArgs
          <?> "class type"
 
+arrayDims :: JParser ()
+arrayDims = pure () <* many (lSquare <* rSquare)
+
 arrayType :: JParser RefType
-arrayType = ArrayType <$>
-    (try (PrimArrayT <$> primType <* lSquare <* rSquare)
-    <|> RefArrayT <$> classOrInterfaceT <* lSquare <* rSquare)
+arrayType = ArrayType 
+         <$> (try (PrimArrayT <$> primType)
+              <|> (RefArrayT <$> classOrInterfaceT))
+         <* arrayDims
 
 typeArgs :: JParser [TypeArg]
-typeArgs = between lessThan greaterThan (do
-    must <- typeArg
-    opt <- many (comma *> typeArg)
-    return (must : opt))
-    <?> "type arguments"
+typeArgs = between lessThan greaterThan
+        ((:) <$> typeArg <*> many (comma *> typeArg))
+        <?> "type arguments"
 
 typeArg :: JParser TypeArg
 typeArg = do
     let wc x = isOperator x && (x === "?")
-    tok <- try (getSS <$> satisfy wc) <|> return ""
+    tok <- try (getSS <$> satisfy wc) <|> pure ""
     if null tok then
         ActualType <$> refType
     else
