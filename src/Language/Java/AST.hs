@@ -122,12 +122,14 @@ data Expression = Literal Literal
                 | TypeNameDotThis TypeName
                 -- | Instant class creation
                 | ClassInstanceCreationExpression ClassInstanceCreation
+                -- | Field access
+                | FieldAccess
                 PRODUCTION
 
 -- | Class instance creation [classInstanceCreation]
--- | e.g  new Comparable<String> {
--- |            <Class Body>
--- |      }
+--  e.g  new Comparable<String> {
+--             <Class Body>
+--  }
 data ClassInstanceCreation =
        WithIdentifier (Maybe TypeArg) Ident
                 TypeArgOrDiam (Maybe ArgList) (Maybe ClassBody)
@@ -146,4 +148,13 @@ data ClassBody = ClassBody
 
 data ArgList = ArgList
                PRODUCTION
+
+-- | Field Access [fieldAccess]
+--  Style 1 (b.key()).field
+--  Style 2 super.field
+--  Style 3 (b.key()).super.field
+data FieldAccess = ExprFieldAccess Expression Ident
+                 | SelfParentFieldAccess Ident
+                 | ParentFieldAccess TypeName Ident
+                 PRODUCTION
 

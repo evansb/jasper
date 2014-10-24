@@ -107,10 +107,17 @@ withPrimary = WithPrimary
 
 typeArgOrDiamond :: JParser TypeArgOrDiam
 typeArgOrDiamond =  try (TypeArg <$> typeArg)
-             <|> (pure Diamond <* lessThan <* greaterThan)
+                <|> (pure Diamond <* lessThan <* greaterThan)
 
 argumentList :: JParser ArgList
 argumentList = undefined
 
 classBody :: JParser ClassBody
 classBody = undefined
+
+fieldAccess :: JParser FieldAccess
+fieldAccess = choice $ map try
+        [ ExprFieldAccess <$> (expression <* dot) <*> ident
+        , SelfParentFieldAccess <$>  (keyword "super" *> dot *> ident)
+        , ParentFieldAccess <$> (typeNameDot <* keyword "super") <*> ident
+        ]
