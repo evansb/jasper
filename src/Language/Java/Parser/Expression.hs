@@ -7,8 +7,9 @@ import Text.Parsec.Prim
 
 import Language.Java.Parser.Core
 import Language.Java.Parser.Basic
-import Language.Java.Parser.Type (typeArgs)
+import Language.Java.Parser.Type (typeArgs, refType, classType, arrayType)
 import Language.Java.AST
+
 
 -- | Java Expressions
 expression :: JParser Expression
@@ -25,7 +26,8 @@ expression = choice (map try [
      ,  fieldAccess
      ,  arrayAccess
      ,  methodInvocation
--}
+     ,  methodReference
+--}
      ]) <?> "expression"
 
 -- | Expression surrounded by parenthesis
@@ -175,3 +177,46 @@ parentMethodInvocation = ParentMethodInvocation
         <*> (keyword "super" *> dot *> optionMaybe typeArgs)
         <*> ident
         <*> between lParen rParen (optionMaybe argList)
+        
+methodReference :: JParser Expression
+methodReference = MethodReference <$> choice (map try
+        [
+        ])
+
+nameMethodReference :: JParser MethodReference
+nameMethodReference = NameMR
+        <$> typeName
+        <*> (dColon *> optionMaybe typeArgs)
+        <*> ident
+     
+refTypeMethodReference :: JParser MethodReference
+refTypeMethodReference = RefTypeMR
+        <$> refType
+        <*> (dColon *> optionMaybe typeArgs)
+        <*> ident
+
+exprMethodReference :: JParser MethodReference
+exprMethodReference = ExprMR
+        <$> expression
+        <*> (dColon *> optionMaybe typeArgs)
+        <*> ident
+
+selfParentMethodReference :: JParser MethodReference
+selfParentMethodReference = SelfParentMR
+        <$> (keyword "super" *> dColon *> optionMaybe typeArgs)
+        <*> ident
+
+parentMethodReference :: JParser MethodReference
+parentMethodReference = ParentMR
+        <$> typeNameDot
+        <*> (keyword "super" *> dColon *> optionMaybe typeArgs)
+        <*> ident
+
+classTypeMethodReference :: JParser MethodReference
+classTypeMethodReference = ClassTypeMR
+        <$> classType
+        <*> (dColon *> optionMaybe typeArgs <* keyword "new")
+
+arrayTypeMethodReference :: JParser MethodReference
+arrayTypeMethodReference = ArrayTypeMR
+        <$> (arrayType <* dColon <* keyword "new")

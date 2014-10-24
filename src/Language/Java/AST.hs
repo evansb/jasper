@@ -55,7 +55,8 @@ data PrimType
     | DoubleT
     PRODUCTION
 
-type ClassType = (Ident, Maybe TypeArgs)
+data ClassType = ClassType Ident (Maybe TypeArgs)
+               PRODUCTION
 
 -- | Reference types [refType]
 data RefType = ClassOrInterfaceType [ClassType]
@@ -130,6 +131,8 @@ data Expression = Literal Literal
                 | ArrayAccess ArrayAccess
                 -- | Method invocation
                 | MethodInvocation MethodInvocation
+                -- | Method reference
+                | MethodReference MethodReference
                 PRODUCTION
 
 -- | Class instance creation [classInstanceCreation]
@@ -178,3 +181,12 @@ data MethodInvocation =
 
 data ArgList = ArgList [Expression]
                PRODUCTION
+
+data MethodReference = NameMR TypeName (Maybe TypeArgs) Ident 
+                     | RefTypeMR RefType (Maybe TypeArgs) Ident
+                     | ExprMR  Expression (Maybe TypeArgs) Ident
+                     | SelfParentMR (Maybe TypeArgs) Ident                     
+                     | ParentMR TypeName (Maybe TypeArgs) Ident
+                     | ClassTypeMR ClassType (Maybe TypeArgs)
+                     | ArrayTypeMR ArrayType
+                     PRODUCTION

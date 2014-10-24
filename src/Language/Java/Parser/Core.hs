@@ -63,6 +63,9 @@ isRParen _ = False
 isSemiColon A.SemiColon = True
 isSemiColon _ = False
 
+isDColon A.DColon = True
+isDColon _ = False
+
 operator s = satisfy (\x -> isOperator x && x === s)
 
 lessThan        = operator "<"
@@ -84,5 +87,6 @@ lParen          = satisfy isLParen
 rParen          = satisfy isRParen
 semiColon       = satisfy isSemiColon
 dot             = satisfy isPeriod
+dColon          = satisfy isDColon
 
 keyword kwd     = satisfy (\x -> isKeyword x && (getSS x == kwd))

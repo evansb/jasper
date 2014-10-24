@@ -35,22 +35,21 @@ primType = (do
 
 -- | Reference types
 refType :: JParser RefType
-refType = (try classOrInterfaceT <|> arrayType)
+refType = (try classOrInterfaceT <|> (ArrayType <$> arrayType))
        <?> "reference type"
 
 classOrInterfaceT :: JParser RefType
 classOrInterfaceT = ClassOrInterfaceType <$> (classType `sepBy1` dot)
 
 classType :: JParser ClassType
-classType = (,) <$> ident <*> optionMaybe typeArgs
+classType = ClassType <$> ident <*> optionMaybe typeArgs
          <?> "class type"
 
 arrayDims :: JParser ()
 arrayDims = pure () <* many (lSquare <* rSquare)
 
-arrayType :: JParser RefType
-arrayType = ArrayType 
-         <$> (try (PrimArrayT <$> primType)
+arrayType :: JParser ArrayType
+arrayType = (try (PrimArrayT <$> primType)
               <|> (RefArrayT <$> classOrInterfaceT))
          <* arrayDims
 
