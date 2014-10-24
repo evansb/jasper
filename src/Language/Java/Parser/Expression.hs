@@ -7,7 +7,7 @@ import Text.Parsec.Prim
 
 import Language.Java.Parser.Core
 import Language.Java.Parser.Basic
-import Language.Java.Parser.Type (typeArg)
+import Language.Java.Parser.Type (typeArgs)
 import Language.Java.AST
 
 -- | Java Expressions
@@ -82,35 +82,35 @@ classInstanceCreationExpression = ClassInstanceCreationExpression <$>
 
 withIdentifier :: JParser ClassInstanceCreation         
 withIdentifier = WithIdentifier
-        <$> (keyword "new" *> optionMaybe typeArg)
+        <$> (keyword "new" *> optionMaybe typeArgs)
         <*> ident
-        <*> typeArgOrDiamond
-        <*> between lParen rParen (optionMaybe argumentList)
+        <*> typeArgsOrDiamond
+        <*> between lParen rParen (optionMaybe argList)
         <*> optionMaybe classBody
 
 withExpressionName :: JParser ClassInstanceCreation
 withExpressionName = WithExpressionName
         <$> typeName
-        <*> (dot *> keyword "new" *> optionMaybe typeArg)
-        <*> typeArgOrDiamond
-        <*> between lParen rParen (optionMaybe argumentList)
+        <*> (dot *> keyword "new" *> optionMaybe typeArgs)
+        <*> typeArgsOrDiamond
+        <*> between lParen rParen (optionMaybe argList)
         <*> optionMaybe classBody
 
 withPrimary :: JParser ClassInstanceCreation
 withPrimary = WithPrimary
         <$> expression
-        <*> (dot *> keyword "new" *> optionMaybe typeArg)
+        <*> (dot *> keyword "new" *> optionMaybe typeArgs)
         <*> ident
-        <*> typeArgOrDiamond
-        <*> between lParen rParen (optionMaybe argumentList)
+        <*> typeArgsOrDiamond
+        <*> between lParen rParen (optionMaybe argList)
         <*> optionMaybe classBody
 
-typeArgOrDiamond :: JParser TypeArgOrDiam
-typeArgOrDiamond =  try (TypeArg <$> typeArg)
+typeArgsOrDiamond :: JParser TypeArgsOrDiam
+typeArgsOrDiamond =  try (TypeArgs <$> typeArgs)
                 <|> (pure Diamond <* lessThan <* greaterThan)
 
-argumentList :: JParser ArgList
-argumentList = undefined
+argList :: JParser ArgList
+argList = ArgList <$> expression `sepBy` comma
 
 classBody :: JParser ClassBody
 classBody = undefined
@@ -121,3 +121,50 @@ fieldAccess = choice $ map try
         , SelfParentFieldAccess <$>  (keyword "super" *> dot *> ident)
         , ParentFieldAccess <$> (typeNameDot <* keyword "super") <*> ident
         ]
+
+arrayAccess :: JParser ArrayAccess
+arrayAccess = try (NormalArrayAccess <$> typeName 
+                                     <*> between lSquare rSquare expression)
+           <|> (ExprArrayAccess  <$> expression
+                                 <*> between lSquare rSquare expression)
+
+methodInvocation :: JParser MethodInvocation
+methodInvocation = choice $ map try
+        [ normalMethodInvocation
+        , nameMethodInvocation
+        , exprMethodInvocation
+        , selfParentMethodInvocation
+        , parentMethodInvocation
+        ]
+
+normalMethodInvocation :: JParser MethodInvocation 
+normalMethodInvocation = NormalMethodInvocation
+        <$> typeName
+        <*> between lParen rParen (optionMaybe argList)
+
+nameMethodInvocation :: JParser MethodInvocation 
+nameMethodInvocation = NameMethodInvocation
+        <$> typeNameDot
+        <*> optionMaybe typeArgs
+        <*> ident
+        <*> between lParen rParen (optionMaybe argList)
+
+exprMethodInvocation :: JParser MethodInvocation
+exprMethodInvocation = ExprMethodInvocation
+        <$> expression
+        <*> (dot *> optionMaybe typeArgs)
+        <*> ident
+        <*> between lParen rParen (optionMaybe argList)
+
+selfParentMethodInvocation :: JParser MethodInvocation 
+selfParentMethodInvocation = SelfParentMethodInvocation
+        <$> (keyword "super" *> dot *> optionMaybe typeArgs)
+        <*> ident
+        <*> between lParen rParen (optionMaybe argList)
+
+parentMethodInvocation :: JParser MethodInvocation 
+parentMethodInvocation = ParentMethodInvocation
+        <$> typeNameDot
+        <*> (keyword "super" *> dot *> optionMaybe typeArgs)
+        <*> ident
+        <*> between lParen rParen (optionMaybe argList)

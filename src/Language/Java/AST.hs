@@ -55,7 +55,7 @@ data PrimType
     | DoubleT
     PRODUCTION
 
-type ClassType = (Ident, Maybe [TypeArg])
+type ClassType = (Ident, Maybe TypeArgs)
 
 -- | Reference types [refType]
 data RefType = ClassOrInterfaceType [ClassType]
@@ -65,6 +65,8 @@ data RefType = ClassOrInterfaceType [ClassType]
 data TypeArg = ActualType RefType
              | Wildcard (Maybe WildcardBound)
              PRODUCTION
+
+type TypeArgs = [TypeArg]
 
 data WildcardBound = SuperWB RefType
                    | ExtendsWB RefType
@@ -124,6 +126,8 @@ data Expression = Literal Literal
                 | ClassInstanceCreationExpression ClassInstanceCreation
                 -- | Field access
                 | FieldAccess
+                -- | Array access
+                | ArrayAccess
                 PRODUCTION
 
 -- | Class instance creation [classInstanceCreation]
@@ -131,30 +135,44 @@ data Expression = Literal Literal
 --             <Class Body>
 --  }
 data ClassInstanceCreation =
-       WithIdentifier (Maybe TypeArg) Ident
-                TypeArgOrDiam (Maybe ArgList) (Maybe ClassBody)
-     | WithExpressionName TypeName (Maybe TypeArg)
-                TypeArgOrDiam (Maybe ArgList) (Maybe ClassBody)
-     | WithPrimary Expression (Maybe TypeArg) Ident
-                TypeArgOrDiam (Maybe ArgList) (Maybe ClassBody)
+       WithIdentifier (Maybe TypeArgs) Ident
+                TypeArgsOrDiam (Maybe ArgList) (Maybe ClassBody)
+     | WithExpressionName TypeName (Maybe TypeArgs)
+                TypeArgsOrDiam (Maybe ArgList) (Maybe ClassBody)
+     | WithPrimary Expression (Maybe TypeArgs) Ident
+                TypeArgsOrDiam (Maybe ArgList) (Maybe ClassBody)
      PRODUCTION
  
-data TypeArgOrDiam = TypeArg TypeArg
+data TypeArgsOrDiam = TypeArgs TypeArgs
                    | Diamond
                    PRODUCTION
 
 data ClassBody = ClassBody
                PRODUCTION
 
-data ArgList = ArgList
-               PRODUCTION
-
 -- | Field Access [fieldAccess]
---  Style 1 (b.key()).field
+--  Style 1 <expression>.field
 --  Style 2 super.field
---  Style 3 (b.key()).super.field
+--  Style 3 <expression>.super.field
 data FieldAccess = ExprFieldAccess Expression Ident
                  | SelfParentFieldAccess Ident
                  | ParentFieldAccess TypeName Ident
                  PRODUCTION
+                 
+-- | Array Access
+-- Style 1 <name>[<expression>]
+-- Style 2 <expression>[<expression>]
+data ArrayAccess = NormalArrayAccess TypeName Expression
+                 | ExprArrayAccess Expression Expression
+                 PRODUCTION
 
+data MethodInvocation = 
+          NormalMethodInvocation TypeName (Maybe ArgList)
+        | NameMethodInvocation TypeName (Maybe TypeArgs) Ident (Maybe ArgList)
+        | ExprMethodInvocation Expression (Maybe TypeArgs) Ident (Maybe ArgList)
+        | SelfParentMethodInvocation (Maybe TypeArgs) Ident (Maybe ArgList)
+        | ParentMethodInvocation TypeName (Maybe TypeArgs) Ident (Maybe ArgList)
+
+
+data ArgList = ArgList [Expression]
+               PRODUCTION
