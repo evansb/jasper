@@ -71,14 +71,9 @@ typeArg = do
 
 -- | Wildcard bounds
 wildcardBound :: JParser WildcardBound
-wildcardBound = do
-    let good x = isKeyword x && ((x === "super") || (x === "extends"))
-    tok <- satisfy good
-    tRefType <- refType
-    return $ if tok === "super"
-                 then SuperWB tRefType
-                 else ExtendsWB tRefType
-    ; <?> "wild card bound"
+wildcardBound = SuperWB <$> (keyword "super" *> refType)
+             <|> ExtendsWB <$> (keyword "extends" *> refType)
+             <?> "wild card bound"
 
 -- | Miscellaneous functions
 primitiveTypes = S.fromList

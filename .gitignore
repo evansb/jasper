@@ -7,3 +7,4 @@ cabal.sandbox.config
 .ghci
 /.dist-buildwrapper/
 /jasper.tar.gz
+/SourceGraph/
