@@ -125,9 +125,11 @@ data Expression = Literal Literal
                 -- | Instant class creation
                 | ClassInstanceCreationExpression ClassInstanceCreation
                 -- | Field access
-                | FieldAccess
+                | FieldAccess FieldAccess
                 -- | Array access
-                | ArrayAccess
+                | ArrayAccess ArrayAccess
+                -- | Method invocation
+                | MethodInvocation MethodInvocation
                 PRODUCTION
 
 -- | Class instance creation [classInstanceCreation]
@@ -172,7 +174,7 @@ data MethodInvocation =
         | ExprMethodInvocation Expression (Maybe TypeArgs) Ident (Maybe ArgList)
         | SelfParentMethodInvocation (Maybe TypeArgs) Ident (Maybe ArgList)
         | ParentMethodInvocation TypeName (Maybe TypeArgs) Ident (Maybe ArgList)
-
+        PRODUCTION
 
 data ArgList = ArgList [Expression]
                PRODUCTION

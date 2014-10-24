@@ -19,7 +19,13 @@ expression = choice (map try [
      ,  typeNameDotClass
      ,  typeNameArrDotClass
      ,  voidDotClass
+{- TODO Uncomment expression prods once ready
+     ,  classInstanceCreationExpression
      ,  expressionParen
+     ,  fieldAccess
+     ,  arrayAccess
+     ,  methodInvocation
+-}
      ]) <?> "expression"
 
 -- | Expression surrounded by parenthesis
@@ -115,27 +121,28 @@ argList = ArgList <$> expression `sepBy` comma
 classBody :: JParser ClassBody
 classBody = undefined
 
-fieldAccess :: JParser FieldAccess
-fieldAccess = choice $ map try
+fieldAccess :: JParser Expression
+fieldAccess = FieldAccess <$> choice (map try
         [ ExprFieldAccess <$> (expression <* dot) <*> ident
         , SelfParentFieldAccess <$>  (keyword "super" *> dot *> ident)
         , ParentFieldAccess <$> (typeNameDot <* keyword "super") <*> ident
-        ]
+        ])
 
-arrayAccess :: JParser ArrayAccess
-arrayAccess = try (NormalArrayAccess <$> typeName 
+arrayAccess :: JParser Expression
+arrayAccess = ArrayAccess <$>
+           (try (NormalArrayAccess <$> typeName 
                                      <*> between lSquare rSquare expression)
            <|> (ExprArrayAccess  <$> expression
-                                 <*> between lSquare rSquare expression)
+                                 <*> between lSquare rSquare expression))
 
-methodInvocation :: JParser MethodInvocation
-methodInvocation = choice $ map try
+methodInvocation :: JParser Expression
+methodInvocation = MethodInvocation <$> choice (map try
         [ normalMethodInvocation
         , nameMethodInvocation
         , exprMethodInvocation
         , selfParentMethodInvocation
         , parentMethodInvocation
-        ]
+        ])
 
 normalMethodInvocation :: JParser MethodInvocation 
 normalMethodInvocation = NormalMethodInvocation
