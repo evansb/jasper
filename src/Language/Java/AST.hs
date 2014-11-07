@@ -102,7 +102,7 @@ data TypeDeclaration = ClassDeclaration
 
 -- | 15. Expressions
 
-data Expression = LambdaExpression LambdaParameters LambdaBody
+data Expression = LambdaExpression LambdaParameters LambdaBody 
                 | AssignmentExpression
                 PRODUCTION
 
@@ -214,13 +214,13 @@ type ConstantExpression = Expression
 data VariableInitializer = Expression Expression
                          | ArrayInitializer ArrayInitializer
                          PRODUCTION
-                         
+
 data LambdaParameters = LPIdent Ident
                       | FormalParameterList
                       | InferredFormalParameterList
                       PRODUCTION
-                      
-data LambdaBody = LambdaBodyExpression Expression 
+
+data LambdaBody = LambdaBodyExpression Expression
                 | LambdaBodyBlock      Block
                 PRODUCTION
 
@@ -233,3 +233,27 @@ data Assignment = Assignment LHS T Expression
 
 data Block = Block
            PRODUCTION
+
+data PostfixExpr = PrimPostfixExpr Primary
+                 | NamePostfixExpr TypeName
+                 | PostIncrementExpr PostfixExpr
+                 | PostDecrementExpr PostfixExpr
+                 PRODUCTION
+
+data UnaryExpression = PreIncrementExpr UnaryExpression
+                     | PreDecrementExpr UnaryExpression
+                     | UnaryPlus UnaryExpression
+                     | UnaryMinus UnaryExpression
+                     | UnaryUnsigned UnaryExpressionNotPlusMinus
+                     PRODUCTION
+
+data UnaryExpressionNotPlusMinus = UnaryPostfix PostfixExpr
+                                 | UnaryTilde UnaryExpression
+                                 | UnaryExclam UnaryExpression
+                                 | UnaryCast CastExpression
+                                 PRODUCTION
+ 
+data CastExpression = UnaryToPrim PrimType UnaryExpression
+                    | UnaryToRef RefType [ClassType] UnaryExpressionNotPlusMinus
+                    | LambdaToRef RefType [ClassType] Expression
+                    PRODUCTION

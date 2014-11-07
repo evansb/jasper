@@ -33,6 +33,9 @@ primary = choice (map try [
 expression :: JParser Expression
 expression = undefined
 
+lambdaExpression :: JParser Expression
+lambdaExpression = undefined
+
 -- | Expression surrounded by parenthesis
 expressionParen :: JParser Expression
 expressionParen = between lParen rParen expression
@@ -181,6 +184,7 @@ parentMethodInvocation = ParentMethodInvocation
         <*> ident
         <*> between lParen rParen (optionMaybe argList)
 
+-- TODO Resolve this
 methodReference :: JParser Primary
 methodReference = MethodReference <$> choice (map try
         [
@@ -241,51 +245,85 @@ arrayCreationExpr = choice
          ,  classTypeACE
          ,  primTypeACEI
          ,  classTypeACEI
-         ]        
+         ]
         <?> "array creation expression"
- 
+
 primTypeACE :: JParser ArrayCreationExpr
 primTypeACE = PrimTypeACE
-        <$> (keyword "new" *> primType) 
-        <*> dimExprs 
+        <$> (keyword "new" *> primType)
+        <*> dimExprs
         <*> (length <$> many dims)
 
 classTypeACE :: JParser ArrayCreationExpr
 classTypeACE = ClassTypeACE
-        <$> (keyword "new" *> classType) 
-        <*> dimExprs 
+        <$> (keyword "new" *> classType)
+        <*> dimExprs
         <*> (length <$> many dims)
 
 primTypeACEI :: JParser ArrayCreationExpr
-primTypeACEI = PrimTypeACEI       
-        <$> (keyword "new" *> primType) 
+primTypeACEI = PrimTypeACEI
+        <$> (keyword "new" *> primType)
         <*> (length <$> many dims)
         <*> arrayInitializer
 
 classTypeACEI :: JParser ArrayCreationExpr
-classTypeACEI = ClassTypeACEI       
-        <$> (keyword "new" *> classType) 
+classTypeACEI = ClassTypeACEI
+        <$> (keyword "new" *> classType)
         <*> (length <$> many dims)
         <*> arrayInitializer
 
 assignmentOperator :: JParser T
 assignmentOperator = choice (map operator [
-         "=", "*=", "/=", "%=", "+=", "-=", "<<=", 
+         "=", "*=", "/=", "%=", "+=", "-=", "<<=",
          ">>=", ">>>=", "&=","^=", "|="
         ])
         <?> "assignment operator"
 
 leftHandSide :: JParser LHS
 leftHandSide = try (LHSExpr <$> choice [ fieldAccess, arrayAccess ])
-        <|> (LHSIdent <$> ident) 
+        <|> (LHSIdent <$> ident)
         <?> "lhs"
 
 assignment :: JParser Assignment
 assignment = Assignment
-       <$> leftHandSide 
+       <$> leftHandSide
        <*> assignmentOperator
        <*> expression
        <?> "assignment"
 
 dims :: JParser ()
 dims = lSquare >> rSquare >> return ()
+
+postfixExpr :: JParser PostfixExpr
+postfixExpr = choice 
+       [ PrimPostfixExpr <$> primary
+       , NamePostfixExpr <$> typeName
+       , PostIncrementExpr <$> postfixExpr <* operator "++"
+       , PostDecrementExpr <$> postfixExpr <* operator "++"
+       ] <?> "postfix expression"
+
+unaryExpr :: JParser UnaryExpression
+unaryExpr = choice
+       [ PreIncrementExpr <$> (operator "++" *> unaryExpr)
+       , PreDecrementExpr <$> (operator "--" *> unaryExpr)
+       , UnaryPlus <$> (operator "+" *> unaryExpr)
+       , UnaryMinus <$> (operator "-" *> unaryExpr)
+       , UnaryNPM <$> unaryExprNPM
+       ] <?> "unary expression"
+
+unaryExprNPM :: JParser UnaryExpressionNotPlusMinus
+unaryExprNPM = choice
+       [ UnaryPostfix <$> postfixExpr
+       , UnaryTilde <$> (operator "~" *> unaryExpr)
+       , UnaryNegate <$> (operator "!" *> unaryExpr)
+       , UnaryCast <$> castExpr
+       ] <?> "unary not plus minus"
+
+castExpr :: JParser CastExpression
+castExpr = choice
+       [ UnaryToPrim <$> (lParen *> primType <* rParen) <*> unaryExpr
+       , UnaryToRef <$> (lParen *> refType) <*> (many classType <* rParen)
+                    <*> unaryExprNPM
+       , LambdaToRef <$> (lParen *> refType) <*> (many classType <* rParen)
+                    <*> lambdaExpression
+       ] <?> "cast expression"
