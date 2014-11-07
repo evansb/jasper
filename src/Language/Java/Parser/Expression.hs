@@ -7,13 +7,13 @@ import Text.Parsec.Prim
 
 import Language.Java.Parser.Core
 import Language.Java.Parser.Basic
-import Language.Java.Parser.Type (typeArgs, refType, classType, arrayType)
+import Language.Java.Parser.Type
 import Language.Java.AST
 
 
 -- | Java Expressions
-expression :: JParser Expression
-expression = choice (map try [
+primary :: JParser Primary
+primary = choice (map try [
         literal
      ,  this
      ,  typeNameDotThis
@@ -30,12 +30,15 @@ expression = choice (map try [
 --}
      ]) <?> "expression"
 
+expression :: JParser Expression
+expression = undefined
+
 -- | Expression surrounded by parenthesis
 expressionParen :: JParser Expression
 expressionParen = between lParen rParen expression
 
 -- | Literals
-literal :: JParser Expression
+literal :: JParser Primary
 literal = Literal <$> do
        tok <- getT
        case tok of
@@ -51,14 +54,14 @@ literal = Literal <$> do
 
 -- | Java name followed by a .class
 -- | e.g foo.bar.qux.class
-typeNameDotClass :: JParser Expression
+typeNameDotClass :: JParser Primary
 typeNameDotClass = TypeNameDotClass
         <$> typeNameDot
         <* keyword "class"
         <?> "typename.class"
 
 -- | Java array name followed by a .class
-typeNameArrDotClass :: JParser Expression
+typeNameArrDotClass :: JParser Primary
 typeNameArrDotClass = TypeNameArrDotClass
         <$> typeName
         <*> (length <$> many (lSquare >> rSquare))
@@ -66,7 +69,7 @@ typeNameArrDotClass = TypeNameArrDotClass
         <?> "typename[].class"
 
 -- | Parses void.class
-voidDotClass :: JParser Expression
+voidDotClass :: JParser Primary
 voidDotClass = pure VoidDotClass
         <* keyword "void"
         <* dot <* keyword "class"
@@ -74,21 +77,21 @@ voidDotClass = pure VoidDotClass
 
 -- | Java name followed by this
 -- | e.g foo.bar.this
-typeNameDotThis :: JParser Expression
+typeNameDotThis :: JParser Primary
 typeNameDotThis = TypeNameDotThis
-        <$> typeNameDot 
+        <$> typeNameDot
         <* keyword "this"
 
 -- | The literal this expression
-this :: JParser Expression
+this :: JParser Primary
 this = pure This <* keyword "this"
 
 -- | Class instance creation expression
-classInstanceCreationExpression :: JParser Expression
+classInstanceCreationExpression :: JParser Primary
 classInstanceCreationExpression = ClassInstanceCreationExpression <$>
      choice (map try [withIdentifier, withExpressionName, withPrimary])
 
-withIdentifier :: JParser ClassInstanceCreation         
+withIdentifier :: JParser ClassInstanceCreation
 withIdentifier = WithIdentifier
         <$> (keyword "new" *> optionMaybe typeArgs)
         <*> ident
@@ -123,21 +126,21 @@ argList = ArgList <$> expression `sepBy` comma
 classBody :: JParser ClassBody
 classBody = undefined
 
-fieldAccess :: JParser Expression
+fieldAccess :: JParser Primary
 fieldAccess = FieldAccess <$> choice (map try
-        [ ExprFieldAccess <$> (expression <* dot) <*> ident
+        [ ExprFieldAccess <$> (primary <* dot) <*> ident
         , SelfParentFieldAccess <$>  (keyword "super" *> dot *> ident)
         , ParentFieldAccess <$> (typeNameDot <* keyword "super") <*> ident
         ])
 
-arrayAccess :: JParser Expression
+arrayAccess :: JParser Primary
 arrayAccess = ArrayAccess <$>
-           (try (NormalArrayAccess <$> typeName 
+           (try (NormalArrayAccess <$> typeName
                                      <*> between lSquare rSquare expression)
            <|> (ExprArrayAccess  <$> expression
                                  <*> between lSquare rSquare expression))
 
-methodInvocation :: JParser Expression
+methodInvocation :: JParser Primary
 methodInvocation = MethodInvocation <$> choice (map try
         [ normalMethodInvocation
         , nameMethodInvocation
@@ -146,12 +149,12 @@ methodInvocation = MethodInvocation <$> choice (map try
         , parentMethodInvocation
         ])
 
-normalMethodInvocation :: JParser MethodInvocation 
+normalMethodInvocation :: JParser MethodInvocation
 normalMethodInvocation = NormalMethodInvocation
         <$> typeName
         <*> between lParen rParen (optionMaybe argList)
 
-nameMethodInvocation :: JParser MethodInvocation 
+nameMethodInvocation :: JParser MethodInvocation
 nameMethodInvocation = NameMethodInvocation
         <$> typeNameDot
         <*> optionMaybe typeArgs
@@ -165,20 +168,20 @@ exprMethodInvocation = ExprMethodInvocation
         <*> ident
         <*> between lParen rParen (optionMaybe argList)
 
-selfParentMethodInvocation :: JParser MethodInvocation 
+selfParentMethodInvocation :: JParser MethodInvocation
 selfParentMethodInvocation = SelfParentMethodInvocation
         <$> (keyword "super" *> dot *> optionMaybe typeArgs)
         <*> ident
         <*> between lParen rParen (optionMaybe argList)
 
-parentMethodInvocation :: JParser MethodInvocation 
+parentMethodInvocation :: JParser MethodInvocation
 parentMethodInvocation = ParentMethodInvocation
         <$> typeNameDot
         <*> (keyword "super" *> dot *> optionMaybe typeArgs)
         <*> ident
         <*> between lParen rParen (optionMaybe argList)
-        
-methodReference :: JParser Expression
+
+methodReference :: JParser Primary
 methodReference = MethodReference <$> choice (map try
         [
         ])
@@ -188,7 +191,7 @@ nameMethodReference = NameMR
         <$> typeName
         <*> (dColon *> optionMaybe typeArgs)
         <*> ident
-     
+
 refTypeMethodReference :: JParser MethodReference
 refTypeMethodReference = RefTypeMR
         <$> refType
@@ -220,3 +223,69 @@ classTypeMethodReference = ClassTypeMR
 arrayTypeMethodReference :: JParser MethodReference
 arrayTypeMethodReference = ArrayTypeMR
         <$> (arrayType <* dColon <* keyword "new")
+
+variableInitializer :: JParser VariableInitializer
+variableInitializer = try (Expression <$> expression)
+        <|> (ArrayInitializer <$> arrayInitializer)
+
+-- { [VariableInitializerList] [,] }
+arrayInitializer :: JParser ArrayInitializer
+arrayInitializer = lBrace *> (variableInitializer `sepBy` comma) <* rBrace
+
+dimExprs :: JParser [DimExpr]
+dimExprs = many1 (DimExpr <$> (lSquare *> expression <* rSquare))
+
+arrayCreationExpr :: JParser ArrayCreationExpr
+arrayCreationExpr = choice
+         [  primTypeACE
+         ,  classTypeACE
+         ,  primTypeACEI
+         ,  classTypeACEI
+         ]        
+        <?> "array creation expression"
+ 
+primTypeACE :: JParser ArrayCreationExpr
+primTypeACE = PrimTypeACE
+        <$> (keyword "new" *> primType) 
+        <*> dimExprs 
+        <*> (length <$> many dims)
+
+classTypeACE :: JParser ArrayCreationExpr
+classTypeACE = ClassTypeACE
+        <$> (keyword "new" *> classType) 
+        <*> dimExprs 
+        <*> (length <$> many dims)
+
+primTypeACEI :: JParser ArrayCreationExpr
+primTypeACEI = PrimTypeACEI       
+        <$> (keyword "new" *> primType) 
+        <*> (length <$> many dims)
+        <*> arrayInitializer
+
+classTypeACEI :: JParser ArrayCreationExpr
+classTypeACEI = ClassTypeACEI       
+        <$> (keyword "new" *> classType) 
+        <*> (length <$> many dims)
+        <*> arrayInitializer
+
+assignmentOperator :: JParser T
+assignmentOperator = choice (map operator [
+         "=", "*=", "/=", "%=", "+=", "-=", "<<=", 
+         ">>=", ">>>=", "&=","^=", "|="
+        ])
+        <?> "assignment operator"
+
+leftHandSide :: JParser LHS
+leftHandSide = try (LHSExpr <$> choice [ fieldAccess, arrayAccess ])
+        <|> (LHSIdent <$> ident) 
+        <?> "lhs"
+
+assignment :: JParser Assignment
+assignment = Assignment
+       <$> leftHandSide 
+       <*> assignmentOperator
+       <*> expression
+       <?> "assignment"
+
+dims :: JParser ()
+dims = lSquare >> rSquare >> return ()

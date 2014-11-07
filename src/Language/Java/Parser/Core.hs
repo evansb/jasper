@@ -66,6 +66,12 @@ isSemiColon _ = False
 isDColon A.DColon = True
 isDColon _ = False
 
+isLBrace A.LBrace = True
+isLBrace _ = False
+
+isRBrace A.RBrace = True
+isRBrace _ = False
+
 operator s = satisfy (\x -> isOperator x && x === s)
 
 lessThan        = operator "<"
@@ -85,6 +91,8 @@ lSquare         = satisfy isLSquare
 rSquare         = satisfy isRSquare
 lParen          = satisfy isLParen
 rParen          = satisfy isRParen
+lBrace          = satisfy isLBrace
+rBrace          = satisfy isRBrace
 semiColon       = satisfy isSemiColon
 dot             = satisfy isPeriod
 dColon          = satisfy isDColon

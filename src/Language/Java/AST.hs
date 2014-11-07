@@ -79,7 +79,7 @@ data ArrayType = PrimArrayT PrimType
 
 -- | 7. Packages
 
-data CompilationUnit = CompilationUnit (Maybe PackageDeclaration) 
+data CompilationUnit = CompilationUnit (Maybe PackageDeclaration)
                                 [ImportDeclaration] [TypeDeclaration]
                      PRODUCTION
 
@@ -102,6 +102,10 @@ data TypeDeclaration = ClassDeclaration
 
 -- | 15. Expressions
 
+data Expression = LambdaExpression LambdaParameters LambdaBody
+                | AssignmentExpression
+                PRODUCTION
+
 -- | Literals [literal]
 data Literal = IntegerLiteral Integer
              | FloatingPointLiteral String
@@ -111,8 +115,8 @@ data Literal = IntegerLiteral Integer
              | NullLiteral
              PRODUCTION
 
--- | Expressions [expression]
-data Expression = Literal Literal
+-- | Primary [primary]
+data Primary = Literal Literal
                 -- | foo.class
                 | TypeNameDotClass TypeName
                 -- | foo[][].class
@@ -147,7 +151,7 @@ data ClassInstanceCreation =
      | WithPrimary Expression (Maybe TypeArgs) Ident
                 TypeArgsOrDiam (Maybe ArgList) (Maybe ClassBody)
      PRODUCTION
- 
+
 data TypeArgsOrDiam = TypeArgs TypeArgs
                    | Diamond
                    PRODUCTION
@@ -159,11 +163,11 @@ data ClassBody = ClassBody
 --  Style 1 <expression>.field
 --  Style 2 super.field
 --  Style 3 <expression>.super.field
-data FieldAccess = ExprFieldAccess Expression Ident
+data FieldAccess = ExprFieldAccess Primary Ident
                  | SelfParentFieldAccess Ident
                  | ParentFieldAccess TypeName Ident
                  PRODUCTION
-                 
+
 -- | Array Access
 -- Style 1 <name>[<expression>]
 -- Style 2 <expression>[<expression>]
@@ -171,7 +175,7 @@ data ArrayAccess = NormalArrayAccess TypeName Expression
                  | ExprArrayAccess Expression Expression
                  PRODUCTION
 
-data MethodInvocation = 
+data MethodInvocation =
           NormalMethodInvocation TypeName (Maybe ArgList)
         | NameMethodInvocation TypeName (Maybe TypeArgs) Ident (Maybe ArgList)
         | ExprMethodInvocation Expression (Maybe TypeArgs) Ident (Maybe ArgList)
@@ -182,11 +186,50 @@ data MethodInvocation =
 data ArgList = ArgList [Expression]
                PRODUCTION
 
-data MethodReference = NameMR TypeName (Maybe TypeArgs) Ident 
+data MethodReference = NameMR TypeName (Maybe TypeArgs) Ident
                      | RefTypeMR RefType (Maybe TypeArgs) Ident
                      | ExprMR  Expression (Maybe TypeArgs) Ident
-                     | SelfParentMR (Maybe TypeArgs) Ident                     
+                     | SelfParentMR (Maybe TypeArgs) Ident
                      | ParentMR TypeName (Maybe TypeArgs) Ident
                      | ClassTypeMR ClassType (Maybe TypeArgs)
                      | ArrayTypeMR ArrayType
                      PRODUCTION
+
+data DimExpr = DimExpr Expression
+             PRODUCTION
+
+type DimExprs = [DimExpr]
+
+data ArrayCreationExpr =
+         PrimTypeACE PrimType DimExprs Int
+       | ClassTypeACE ClassType DimExprs Int
+       | PrimTypeACEI PrimType Int ArrayInitializer
+       | ClassTypeACEI ClassType Int ArrayInitializer
+       PRODUCTION
+
+type ArrayInitializer = [VariableInitializer]
+
+type ConstantExpression = Expression
+
+data VariableInitializer = Expression Expression
+                         | ArrayInitializer ArrayInitializer
+                         PRODUCTION
+                         
+data LambdaParameters = LPIdent Ident
+                      | FormalParameterList
+                      | InferredFormalParameterList
+                      PRODUCTION
+                      
+data LambdaBody = LambdaBodyExpression Expression 
+                | LambdaBodyBlock      Block
+                PRODUCTION
+
+data LHS = LHSExpr  Primary
+         | LHSIdent Ident
+         PRODUCTION
+
+data Assignment = Assignment LHS T Expression
+                PRODUCTION
+
+data Block = Block
+           PRODUCTION
