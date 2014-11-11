@@ -76,6 +76,9 @@ refArrayType = RefArrayT <$> classOrInterfaceT <*> arrayDims
 typeVarArrayType :: JParser ArrayType
 typeVarArrayType = TypeVarArrayT <$> typeVariable <*> arrayDims
 
+typeParams :: JParser [TypeParam]
+typeParams = between lessThan greaterThan (typeParam `sepBy1` comma)
+
 typeParam :: JParser TypeParam
 typeParam = TypeParam <$> ident <*> optionMaybe typeBound
 

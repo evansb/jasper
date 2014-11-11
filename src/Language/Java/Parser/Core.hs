@@ -27,7 +27,7 @@ getSS :: A.T -> String
 getSS (A.TokIdent   s) = s
 getSS (A.Keyword    s) = s
 getSS (A.Operator   s) = s
-getSS _ = undefined
+getSS _                = error "Non string storing token"
 
 (===) :: A.T -> String -> Bool
 t === s = getSS t == s

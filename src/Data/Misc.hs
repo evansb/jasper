@@ -2,6 +2,8 @@
 module Data.Misc where
 
 import qualified Data.HashSet as S hiding (map)
+import qualified Data.Map as M
+import qualified Language.Java.AST as A
 
 reservedNames = [
     "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char",
@@ -28,6 +30,17 @@ reservedOpNames = [
     "<<=", "<<", "<=", "<",
     "?"
     ]
+
+classModifierTable :: M.Map String A.ClassModifier
+classModifierTable = M.fromList
+                   [ ("public"     , A.Public)
+                   , ("protected"  , A.Protected)
+                   , ("private"    , A.Private)
+                   , ("abstract"   , A.Abstract)
+                   , ("static"     , A.Static)
+                   , ("final"      , A.Final)
+                   , ("strictfp"   , A.StrictFP)
+                   ]
 
 keywordTable = S.fromList reservedNames
 operatorTable = S.fromList reservedOpNames

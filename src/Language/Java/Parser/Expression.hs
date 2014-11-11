@@ -229,14 +229,6 @@ arrayTypeMethodReference :: JParser MethodReference
 arrayTypeMethodReference = ArrayTypeMR
         <$> (arrayType <* dColon <* keyword "new")
 
-variableInitializer :: JParser VariableInitializer
-variableInitializer = try (Expression <$> expression)
-        <|> (ArrayInitializer <$> arrayInitializer)
-
--- { [VariableInitializerList] [,] }
-arrayInitializer :: JParser ArrayInitializer
-arrayInitializer = lBrace *> (variableInitializer `sepBy` comma) <* rBrace
-
 dimExprs :: JParser [DimExpr]
 dimExprs = many1 (DimExpr <$> (lSquare *> expression <* rSquare))
 
@@ -355,3 +347,12 @@ table  = [ postfix <$> [ "++", "--" ]
 binary op = Infix (BinaryExpr <$> operator op) AssocLeft
 postfix op = Postfix (PostfixExpr <$> operator op)
 prefix op = Prefix (PrefixExpr <$> operator op)
+
+variableInitializer :: JParser VariableInitializer
+variableInitializer = choice
+                    [ Expression <$> expression
+                    , ArrayInitializer <$> arrayInitializer
+                    ] <?> "variable initializer"
+
+arrayInitializer :: JParser ArrayInitializer
+arrayInitializer = lBrace *> (variableInitializer `sepBy` comma) <* rBrace

@@ -125,6 +125,91 @@ data TypeDeclaration = ClassDeclaration
 
 -- | 8. Classes
 
+type SuperClass = ClassType
+type SuperInterfaces = [ClassType]
+
+data ClassDeclaration = Class [ClassModifier] Ident
+                      (Maybe [TypeParam]) (Maybe SuperClass)
+                      (Maybe SuperInterfaces) ClassBody
+                      PRODUCTION
+
+data ClassModifier = Public | Protected | Private | Abstract
+                   | Static | Final | StrictFP
+                   PRODUCTION
+
+data ClassBodyDecl = ClassMemberDecl ClassMemberDecl
+                   | InstanceInitializer
+                   | StaticInitializer
+                   | ConstructorDecl
+                   PRODUCTION
+
+type UnannType = Type
+
+data ClassMemberDecl =
+            FieldDecl  [FieldModifier] UnannType VariableDeclaratorList
+          | MethodDecl [MethodModifier] MethodHeader MethodBody
+          | ClassDecl ClassDeclaration
+          | InterfaceDecl InterfaceDecl
+          PRODUCTION
+
+data FieldModifier = PublicF | ProtectedF | PrivateF
+                   | StaticF | FinalF | TransientF | VolatileF
+                   PRODUCTION
+
+type VariableDeclaratorList = [VariableDeclarator]
+
+data VariableDeclarator =
+        VariableDeclarator VariableDeclID (Maybe VariableInitializer)
+        PRODUCTION
+
+type VariableDeclID = (Ident, Dims)
+
+data MethodModifier = PublicM | ProtectedM | PrivateM
+                   | StaticM | FinalM | TransientM | SynchronizedM
+                   | NativeM | StrictFPM
+                   PRODUCTION
+
+data Result = RType UnannType
+            | RVoid
+            PRODUCTION
+
+-- Note : This is simplified
+data MethodHeader = MethodHeader
+                    (Maybe [TypeParam])
+                    Result Ident FormalParameterList (Maybe Dims) (Maybe Throws)
+                  PRODUCTION
+
+data MethodBody = MethodBody
+                PRODUCTION
+
+type FormalParameterList = [FormalParameter]
+
+-- TODO Add Annotation
+data VariableModifier = FinalV
+                      PRODUCTION
+
+data FormalParameter =
+             FormalParameter
+                [VariableModifier] UnannType VariableDeclID
+            -- TODO Change VariableModifier to Annotation
+             | ReceiverParameter
+                [VariableModifier] UnannType (Maybe Ident)
+            -- TODO Change VariableModifier to Annotation
+             | EllipsisParameter
+                [VariableModifier] UnannType [VariableModifier] VariableDeclID
+             PRODUCTION
+
+data VariableInitializer = Expression Expression
+                         | ArrayInitializer ArrayInitializer
+                         PRODUCTION
+
+data InterfaceDecl = UInterfaceDecl
+                   PRODUCTION
+
+data Throws = UThrows
+            PRODUCTION
+
+
 -- | 15. Expressions
 
 data Expression = LambdaExpression LambdaParameters LambdaBody
@@ -178,8 +263,8 @@ data ClassInstanceCreation =
      PRODUCTION
 
 data TypeArgsOrDiam = TypeArgs TypeArgs
-                   | Diamond
-                   PRODUCTION
+                    | Diamond
+                    PRODUCTION
 
 data ClassBody = ClassBody
                PRODUCTION
@@ -236,13 +321,9 @@ type ArrayInitializer = [VariableInitializer]
 
 type ConstantExpression = Expression
 
-data VariableInitializer = Expression Expression
-                         | ArrayInitializer ArrayInitializer
-                         PRODUCTION
-
-data LambdaParameters = LPIdent Ident
-                      | FormalParameterList [Ident]
-                      | InferredFormalParameterList [Ident]
+data LambdaParameters = LIdent Ident
+                      | LFormalParameterList FormalParameterList
+                      | LInferredFormalParameterList [Ident]
                       PRODUCTION
 
 data LambdaBody = LambdaBodyExpression Expression
