@@ -1,15 +1,244 @@
-{-# LANGUAGE  DoAndIfThenElse #-}
-module Language.Java.Parser.Expression where
+{-# LANGUAGE DoAndIfThenElse #-}
+module Language.Java.Parser.Internal where
 
-import Control.Applicative ((<$>), (<*), (*>), (<*>), pure)
+import Control.Applicative ((<$>), (*>), (<*), (<*>), pure)
+import qualified Data.Set as S hiding (map)
+import qualified Data.Map as M
+import Data.Maybe (fromMaybe)
+import Data.Misc
+
 import Text.Parsec.Combinator
 import Text.Parsec.Prim
 import Text.Parsec.Expr
 
-import Language.Java.Parser.Core
-import Language.Java.Parser.Basic
-import Language.Java.Parser.Type
 import Language.Java.AST
+import Language.Java.Parser.Core
+
+-- | Java Identifier
+ident :: JParser Ident
+ident = Ident <$> (getSS <$> satisfy isIdentifier)
+
+-- | Java Name
+typeName :: JParser TypeName
+typeName = TypeName <$> ident `sepBy1` dot
+
+-- | Java Name Dot, for parsing Name dot class
+typeNameDot :: JParser TypeName
+typeNameDot = TypeName <$> ident `sepEndBy1` dot
+
+--------------------------------------
+-- | Productions from §4 (Types, Values, and Variables)
+--------------------------------------
+
+-- | Java types are either primitive or reference types.
+type_ :: JParser Type
+type_ = try (PrimType <$> primType)
+     <|> (RefType <$> refType)
+
+-- | Primitive types.
+primType :: JParser PrimType
+primType = (do
+    let isPrimType x = isKeyword x && S.member (getSS x) primitiveTypes
+    tok <- satisfy isPrimType
+    return $ case getSS tok of
+      "byte"    -> ByteT
+      "short"   -> ShortT
+      "int"     -> IntT
+      "long"    -> LongT
+      "char"    -> CharT
+      "float"   -> FloatT
+      "double"  -> DoubleT
+      _         -> BooleanT)
+    <?> "primitive type"
+
+-- | Reference types.
+refType :: JParser RefType
+refType = (try classOrInterfaceT <|> (ArrayType <$> arrayType))
+       <?> "reference type"
+
+classOrInterfaceT :: JParser RefType
+classOrInterfaceT = ClassOrInterfaceType <$> classType
+
+classType :: JParser ClassType
+classType = ClassType <$> ident <*> optionMaybe typeArgs
+         <?> "class type"
+
+simpleClassType :: JParser ClassType
+simpleClassType = ClassType <$> ident <*> optionMaybe typeArgs
+
+aggrClassType :: JParser ClassType
+aggrClassType = AggrClassType
+             <$> (many classType <* dot)
+             <*> ident
+             <*> optionMaybe typeArgs
+
+arrayDims :: JParser Int
+arrayDims = length <$> many (lSquare <* rSquare)
+
+arrayType :: JParser ArrayType
+arrayType = choice (map try
+          [ primArrayType
+          , refArrayType
+          , typeVarArrayType
+          ]) <?> "array types"
+
+typeVariable :: JParser TypeVariable
+typeVariable = ident
+
+primArrayType :: JParser ArrayType
+primArrayType = PrimArrayT <$> primType <*> arrayDims
+
+refArrayType :: JParser ArrayType
+refArrayType = RefArrayT <$> classOrInterfaceT <*> arrayDims
+
+typeVarArrayType :: JParser ArrayType
+typeVarArrayType = TypeVarArrayT <$> typeVariable <*> arrayDims
+
+typeParams :: JParser [TypeParam]
+typeParams = between lessThan greaterThan (typeParam `sepBy1` comma)
+
+typeParam :: JParser TypeParam
+typeParam = TypeParam <$> ident <*> optionMaybe typeBound
+
+typeBound :: JParser TypeBound
+typeBound = keyword "extends" *> choice (map try
+          [ ExtendsTypeVar   <$> typeVariable
+          , ExtendsClassType <$> classType <*> additionalBound
+          ])
+
+additionalBound :: JParser [ClassType]
+additionalBound = many (operator "&" *> classType)
+
+typeArgs :: JParser [TypeArg]
+typeArgs = between lessThan greaterThan (typeArg `sepBy1` comma)
+        <?> "type arguments"
+
+typeArg :: JParser TypeArg
+typeArg = do
+    let wc x = isOperator x && (x === "?")
+    tok <- try (getSS <$> satisfy wc) <|> pure ""
+    if null tok then
+        ActualType <$> refType
+    else
+        Wildcard <$> optionMaybe wildcardBound
+    ; <?> "type argument"
+
+-- | Wildcard bounds
+wildcardBound :: JParser WildcardBound
+wildcardBound = SuperWB <$> (keyword "super" *> refType)
+             <|> ExtendsWB <$> (keyword "extends" *> refType)
+             <?> "wild card bound"
+
+-- | Miscellaneous functions
+primitiveTypes = S.fromList
+      [ "byte" , "short" , "int" , "long" , "char",
+        "float" , "double" , "boolean"]
+
+--------------------------------------
+-- | Productions from §7 (Packages)
+--------------------------------------
+
+-- | Compilation unit
+compilationUnit :: JParser CompilationUnit
+compilationUnit = CompilationUnit
+        <$> optionMaybe packageDeclaration
+        <*> many importDeclaration
+        <*> many typeDeclaration
+        <?> "compilation unit"
+
+-- | Package declaration
+packageDeclaration :: JParser PackageDeclaration
+packageDeclaration = PackageDeclaration
+        <$> many packageModifier
+        <*> typeName
+        <*  semiColon
+        <?> "package declaration"
+
+-- | Package Modifier = Annotation
+-- | TODO Change this once Annotation is finished
+packageModifier :: JParser PackageModifier
+packageModifier = return PackageModifier
+               <?> "package modifier"
+
+-- | Import declaration
+importDeclaration :: JParser ImportDeclaration
+importDeclaration = choice (map try [
+          singleTypeImportDeclaration
+        , typeImportOnDemandDeclaration
+        , singleStaticImportDeclaration
+        , staticImportOnDemandDeclaration
+        ])
+        <?> "import declaration"
+
+singleTypeImportDeclaration :: JParser ImportDeclaration
+singleTypeImportDeclaration = SingleTypeImportDeclaration
+        <$> (keyword "import" *> typeName)
+        <* semiColon
+
+typeImportOnDemandDeclaration :: JParser ImportDeclaration
+typeImportOnDemandDeclaration = TypeImportOnDemandDeclaration
+        <$> (keyword "import" *> typeNameDot <* star <* semiColon)
+
+singleStaticImportDeclaration :: JParser ImportDeclaration
+singleStaticImportDeclaration = do
+        tn <- keyword "import" *> keyword "static" *> typeNameDot <* semiColon
+        case tn of
+            TypeName s@(_:_:_) -> do
+                    let (x,y) = splitAt (length s - 1) s
+                    return $ SingleStaticImportDeclaration (TypeName x) (head y)
+            _ -> unexpected "Cannot import whole class"
+
+staticImportOnDemandDeclaration :: JParser ImportDeclaration
+staticImportOnDemandDeclaration = StaticImportOnDemandDeclaration
+        <$> (keyword "import" *> keyword "static" *> typeNameDot <*
+            (star <* semiColon))
+
+-- | Productions from §8 (Classes)
+superClass :: JParser SuperClass
+superClass = keyword "extends" *> classType
+
+superInterfaces :: JParser SuperInterfaces
+superInterfaces = keyword "implements" *> (classType `sepBy1` comma)
+
+classDeclaration :: JParser ClassDeclaration
+classDeclaration = normalClassDeclaration
+
+classModifiers :: JParser [ClassModifier]
+classModifiers = many classModifier
+
+-- TODO Add Annotation
+classModifier :: JParser ClassModifier
+classModifier = do
+        tok <- getSS <$> getT
+        case M.lookup tok classModifierTable of
+            Just modifier -> return modifier
+            Nothing -> unexpected "class modifier"
+
+classBody :: JParser ClassBody
+classBody = error "not implemented"
+
+normalClassDeclaration :: JParser ClassDeclaration
+normalClassDeclaration = Class
+                      <$> classModifiers
+                      <*> (keyword "class" *> ident)
+                      <*> optionMaybe typeParams
+                      <*> optionMaybe superClass
+                      <*> optionMaybe superInterfaces
+                      <*> classBody
+                      <?> "normal class declaration"
+
+variableDeclarator :: JParser VariableDeclarator
+variableDeclarator = VariableDeclarator
+                  <$> variableDeclaratorID
+                  <*> optionMaybe (operator "=" *> variableInitializer)
+
+variableDeclaratorID :: JParser VariableDeclID
+variableDeclaratorID = (,) <$> ident <*> (fromMaybe 0 <$> optionMaybe arrayDims)
+
+
+-- TODO Resolve this
+typeDeclaration :: JParser TypeDeclaration
+typeDeclaration = undefined
 
 -- | Java Expressions
 primary :: JParser Primary
@@ -30,9 +259,11 @@ primary = choice (map try [
 --}
      ]) <?> "expression"
 
+-- | TODO resolve this
 expression :: JParser Expression
 expression = undefined
 
+-- | TODO resolve this
 lambdaExpression :: JParser Expression
 lambdaExpression = undefined
 
@@ -324,10 +555,7 @@ opExpression :: JParser OpExpr
 opExpression = buildExpressionParser table opExpr
 
 opExpr :: JParser OpExpr
-opExpr = choice
-       [ PrimExpr <$> primary
-       , NameExpr <$> typeName
-       ]
+opExpr = choice [ PrimExpr <$> primary, NameExpr <$> typeName ]
 
 table  = [ postfix <$> [ "++", "--" ]
          , prefix  <$> [ "++", "--", "+", "-", "~", "!" ]

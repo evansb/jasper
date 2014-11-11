@@ -25,6 +25,7 @@ library
         Language.Java.Parser.Expression
         Language.Java.Parser.Packages
         Language.Java.Parser.Class
+        Language.Java.Parser.Internal
         Language.Java.Lexer
         Language.Java.Parser
         Language.Java.AST
