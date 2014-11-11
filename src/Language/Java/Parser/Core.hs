@@ -72,19 +72,13 @@ isLBrace _ = False
 isRBrace A.RBrace = True
 isRBrace _ = False
 
-operator s = satisfy (\x -> isOperator x && x === s)
+operator s      = satisfy (\x -> isOperator x && x === s)
+keyword kwd     = satisfy (\x -> isKeyword x && (getSS x == kwd))
 
-lessThan        = operator "<"
-greaterThan     = operator ">"
-lessThanEq      = operator "<="
-greaterThanEq   = operator ">="
-star            = operator "*"
-
-multOp          = operator "*"
-addOp           = operator "+"
-incOp           = operator "++"
-minOp           = operator "-"
-decOp           = operator "--"
+lessThan        = operator "<"      >> return A.OpLT
+greaterThan     = operator ">"      >> return A.OpGT
+star            = operator "*"      >> return A.OpMult
+multOp          = star
 
 comma           = satisfy isComma
 lSquare         = satisfy isLSquare
@@ -96,5 +90,3 @@ rBrace          = satisfy isRBrace
 semiColon       = satisfy isSemiColon
 dot             = satisfy isPeriod
 dColon          = satisfy isDColon
-
-keyword kwd     = satisfy (\x -> isKeyword x && (getSS x == kwd))

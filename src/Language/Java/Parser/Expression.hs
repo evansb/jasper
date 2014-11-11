@@ -4,6 +4,7 @@ module Language.Java.Parser.Expression where
 import Control.Applicative ((<$>), (<*), (*>), (<*>), pure)
 import Text.Parsec.Combinator
 import Text.Parsec.Prim
+import Text.Parsec.Expr
 
 import Language.Java.Parser.Core
 import Language.Java.Parser.Basic
@@ -139,9 +140,9 @@ fieldAccess = FieldAccess <$> choice (map try
 arrayAccess :: JParser Primary
 arrayAccess = ArrayAccess <$>
            (try (NormalArrayAccess <$> typeName
-                                     <*> between lSquare rSquare expression)
-           <|> (ExprArrayAccess  <$> expression
-                                 <*> between lSquare rSquare expression))
+                                   <*> between lSquare rSquare expression)
+           <|> (ExprArrayAccess    <$> expression
+                                   <*> between lSquare rSquare expression))
 
 methodInvocation :: JParser Primary
 methodInvocation = MethodInvocation <$> choice (map try
@@ -295,7 +296,7 @@ dims :: JParser ()
 dims = lSquare >> rSquare >> return ()
 
 postfixExpr :: JParser PostfixExpr
-postfixExpr = choice 
+postfixExpr = choice
        [ PrimPostfixExpr <$> primary
        , NamePostfixExpr <$> typeName
        , PostIncrementExpr <$> postfixExpr <* operator "++"
@@ -327,3 +328,30 @@ castExpr = choice
        , LambdaToRef <$> (lParen *> refType) <*> (many classType <* rParen)
                     <*> lambdaExpression
        ] <?> "cast expression"
+
+opExpression :: JParser OpExpr
+opExpression = buildExpressionParser table opExpr
+
+opExpr :: JParser OpExpr
+opExpr = choice
+       [ PrimExpr <$> primary
+       , NameExpr <$> typeName
+       ]
+
+table  = [ postfix <$> [ "++", "--" ]
+         , prefix  <$> [ "++", "--", "+", "-", "~", "!" ]
+         , binary  <$> [ "*", "/", "%" ]
+         , binary  <$> [ "+", "-" ]
+         , binary  <$> [ "<<", ">>", ">>>" ]
+         , binary  <$> [ "<", ">", "<=", ">=", "instanceof" ]
+         , binary  <$> [ "==", "!=" ]
+         , binary  <$> [ "&" ]
+         , binary  <$> [ "^"]
+         , binary  <$> [ "|" ]
+         , binary  <$> [ "&&" ]
+         , binary  <$> [ "||" ]
+         ]
+
+binary op = Infix (BinaryExpr <$> operator op) AssocLeft
+postfix op = Postfix (PostfixExpr <$> operator op)
+prefix op = Prefix (PrefixExpr <$> operator op)

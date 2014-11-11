@@ -39,23 +39,57 @@ refType = (try classOrInterfaceT <|> (ArrayType <$> arrayType))
        <?> "reference type"
 
 classOrInterfaceT :: JParser RefType
-classOrInterfaceT = ClassOrInterfaceType <$> (classType `sepBy1` dot)
+classOrInterfaceT = ClassOrInterfaceType <$> classType
 
 classType :: JParser ClassType
 classType = ClassType <$> ident <*> optionMaybe typeArgs
          <?> "class type"
 
-arrayDims :: JParser ()
-arrayDims = pure () <* many (lSquare <* rSquare)
+simpleClassType :: JParser ClassType
+simpleClassType = ClassType <$> ident <*> optionMaybe typeArgs
+
+aggrClassType :: JParser ClassType
+aggrClassType = AggrClassType
+             <$> (many classType <* dot)
+             <*> ident
+             <*> optionMaybe typeArgs
+
+arrayDims :: JParser Int
+arrayDims = length <$> many (lSquare <* rSquare)
 
 arrayType :: JParser ArrayType
-arrayType = (try (PrimArrayT <$> primType)
-              <|> (RefArrayT <$> classOrInterfaceT))
-         <* arrayDims
+arrayType = choice (map try
+          [ primArrayType
+          , refArrayType
+          , typeVarArrayType
+          ]) <?> "array types"
+
+typeVariable :: JParser TypeVariable
+typeVariable = ident
+
+primArrayType :: JParser ArrayType
+primArrayType = PrimArrayT <$> primType <*> arrayDims
+
+refArrayType :: JParser ArrayType
+refArrayType = RefArrayT <$> classOrInterfaceT <*> arrayDims
+
+typeVarArrayType :: JParser ArrayType
+typeVarArrayType = TypeVarArrayT <$> typeVariable <*> arrayDims
+
+typeParam :: JParser TypeParam
+typeParam = TypeParam <$> ident <*> optionMaybe typeBound
+
+typeBound :: JParser TypeBound
+typeBound = keyword "extends" *> choice (map try
+          [ ExtendsTypeVar   <$> typeVariable
+          , ExtendsClassType <$> classType <*> additionalBound
+          ])
+
+additionalBound :: JParser [ClassType]
+additionalBound = many (operator "&" *> classType)
 
 typeArgs :: JParser [TypeArg]
-typeArgs = between lessThan greaterThan
-        ((:) <$> typeArg <*> many (comma *> typeArg))
+typeArgs = between lessThan greaterThan (typeArg `sepBy1` comma)
         <?> "type arguments"
 
 typeArg :: JParser TypeArg

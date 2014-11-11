@@ -8,7 +8,13 @@ import Text.Parsec
 type Token = (T, SourcePos)
 data T  = Keyword    String
         | Operator   String
-
+        -- Operators
+        | OpIncr    | OpDecr    | OpPlus  | OpMinus  | OpTilde
+        | OpExcl    | OpMult    | OpDiv   | OpMod    | OpRShift
+        | OpURShift | OpLShift  | OpLT    | OpGT     | OpGTEq
+        | OpLTEq    | OpIOf     | OpEqEq  | OpNotEq  | OpBitAnd
+        | OpOr      | OpBitOr   | OpBitXor
+        -- Literal tokens
         | TokInt     Integer
         | TokLong    Integer
         | TokDouble  String
@@ -38,12 +44,12 @@ data Ident = Ident String
 data TypeName = TypeName [Ident]
           PRODUCTION
 
--- | Type annotations [type_]
+-- | Primitive types or Reference Types. [type_]
 data Type = PrimType PrimType
           | RefType RefType
           PRODUCTION
 
--- | Primitive types [primType]
+-- | Primitive types. [primType]
 data PrimType
     = BooleanT
     | ByteT
@@ -55,13 +61,20 @@ data PrimType
     | DoubleT
     PRODUCTION
 
+-- | Classes type are either simple class type or aggregate.
+--   ClassType       Container<T>
+--   AggrClassType   java.util.Container<T>
 data ClassType = ClassType Ident (Maybe TypeArgs)
+               | AggrClassType [ClassType] Ident (Maybe TypeArgs)
                PRODUCTION
 
 -- | Reference types [refType]
-data RefType = ClassOrInterfaceType [ClassType]
+-- There is no significant difference between class and interface type.
+data RefType = ClassOrInterfaceType ClassType
              | ArrayType ArrayType
              PRODUCTION
+
+type TypeVariable = Ident
 
 data TypeArg = ActualType RefType
              | Wildcard (Maybe WildcardBound)
@@ -73,8 +86,18 @@ data WildcardBound = SuperWB RefType
                    | ExtendsWB RefType
                    PRODUCTION
 
-data ArrayType = PrimArrayT PrimType
-               | RefArrayT RefType
+data ArrayType = PrimArrayT PrimType Dims
+               | RefArrayT RefType Dims
+               | TypeVarArrayT TypeVariable Dims
+               PRODUCTION
+
+type Dims = Int
+
+data TypeParam = TypeParam Ident (Maybe TypeBound)
+               PRODUCTION
+
+data TypeBound = ExtendsTypeVar TypeVariable
+               | ExtendsClassType ClassType [ClassType]
                PRODUCTION
 
 -- | 7. Packages
@@ -100,9 +123,11 @@ data TypeDeclaration = ClassDeclaration
                      | EmptyStatement
                      PRODUCTION
 
+-- | 8. Classes
+
 -- | 15. Expressions
 
-data Expression = LambdaExpression LambdaParameters LambdaBody 
+data Expression = LambdaExpression LambdaParameters LambdaBody
                 | AssignmentExpression
                 PRODUCTION
 
@@ -216,8 +241,8 @@ data VariableInitializer = Expression Expression
                          PRODUCTION
 
 data LambdaParameters = LPIdent Ident
-                      | FormalParameterList
-                      | InferredFormalParameterList
+                      | FormalParameterList [Ident]
+                      | InferredFormalParameterList [Ident]
                       PRODUCTION
 
 data LambdaBody = LambdaBodyExpression Expression
@@ -244,16 +269,26 @@ data UnaryExpression = PreIncrementExpr UnaryExpression
                      | PreDecrementExpr UnaryExpression
                      | UnaryPlus UnaryExpression
                      | UnaryMinus UnaryExpression
-                     | UnaryUnsigned UnaryExpressionNotPlusMinus
+                     | UnaryNPM UnaryExpressionNotPlusMinus
                      PRODUCTION
 
 data UnaryExpressionNotPlusMinus = UnaryPostfix PostfixExpr
                                  | UnaryTilde UnaryExpression
-                                 | UnaryExclam UnaryExpression
+                                 | UnaryNegate UnaryExpression
                                  | UnaryCast CastExpression
                                  PRODUCTION
- 
+
 data CastExpression = UnaryToPrim PrimType UnaryExpression
                     | UnaryToRef RefType [ClassType] UnaryExpressionNotPlusMinus
                     | LambdaToRef RefType [ClassType] Expression
                     PRODUCTION
+
+data CondExpr = CondExpr Expression Expression Expression
+              PRODUCTION
+
+data OpExpr = PrimExpr Primary
+            | NameExpr TypeName
+            | PrefixExpr T OpExpr
+            | PostfixExpr T OpExpr
+            | BinaryExpr T OpExpr OpExpr
+            PRODUCTION
