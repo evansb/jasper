@@ -7,7 +7,6 @@ import Test.Misc
 import qualified Language.Java.AST as A
 import qualified Language.Java.Lexer.Internal as L
 
-import qualified Data.Misc
 import Language.Java.Lexer
 
 isKeyword :: A.Token -> Bool
@@ -36,7 +35,7 @@ spec = describe "Lexer" $ do
                     , "\"\\x\""           -- Unknown escape \x
                 ]
         it "Should be able to parse reserved keywords" $ do
-            let rn = Data.Misc.reservedNames
+            let rn = L.javaReservedNames
             let r = unwords rn
             let tokens = runTokenizer r
             countKeywords tokens `shouldBe` length rn

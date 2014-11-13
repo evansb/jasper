@@ -5,9 +5,8 @@ import Test.Hspec
 import Test.Misc
 
 import Language.Java.AST
-import Data.Misc (reservedNames)
-
-import Language.Java.Parser.Basic
+import Language.Java.Lexer.Internal (javaReservedNames)
+import Language.Java.Parser.Internal
 
 spec :: Spec
 spec = describe "Basic Parser" $ do
@@ -16,7 +15,7 @@ spec = describe "Basic Parser" $ do
                 [ "Boo" `to` Ident "Boo"
                 , "foobar2000" `to` Ident "foobar2000"
                 ]
-            ident `shouldFailOnJ` reservedNames
+            ident `shouldFailOnJ` javaReservedNames
         it "Should be able to parse names" $ do
             typeName `shouldParseJ`
                 [ "foo.bar.baz" `to` TypeName (map Ident ["foo", "bar", "baz"])

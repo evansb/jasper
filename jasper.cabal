@@ -17,16 +17,10 @@ tested-with:         GHC==7.8.2
 library
     hs-source-dirs:  src
     exposed-modules:
-        Data.Misc
         Language.Java.Lexer.Internal
-        Language.Java.Parser.Core
-        Language.Java.Parser.Basic
-        Language.Java.Parser.Type
-        Language.Java.Parser.Expression
-        Language.Java.Parser.Packages
-        Language.Java.Parser.Class
-        Language.Java.Parser.Internal
         Language.Java.Lexer
+        Language.Java.Parser.Core
+        Language.Java.Parser.Internal
         Language.Java.Parser
         Language.Java.AST
     ghc-options:     -O4 -Wall -fno-warn-unused-do-bind -fno-warn-missing-signatures

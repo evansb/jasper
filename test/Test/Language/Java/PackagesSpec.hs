@@ -5,7 +5,7 @@ import Test.Hspec
 import Test.Misc
 
 import Language.Java.AST
-import Language.Java.Parser.Packages
+import Language.Java.Parser.Internal
 
 spec :: Spec
 spec = describe "Packages" $ do        

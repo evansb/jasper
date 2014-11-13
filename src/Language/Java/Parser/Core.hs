@@ -2,82 +2,83 @@
 module Language.Java.Parser.Core where
 
 import Text.Parsec hiding (satisfy)
-import qualified Language.Java.AST as A
+import qualified Data.Map as M
+
+import Language.Java.AST
 
 -- | Type of the Java Parser
-type JParser a = Parsec [A.Token] () a
+type JParser a = Parsec [Token] () a
 
 -- | Advance token position
-nextPos :: SourcePos -> t -> [A.Token] -> SourcePos
+nextPos :: SourcePos -> t -> [Token] -> SourcePos
 nextPos _ _ ((_, pos) : _) = pos
-nextPos pos _ [] = pos;
+nextPos pos _ [] = pos
 
 -- | Same as Parsec's satisfy, this is for Java token
-satisfy :: (A.T -> Bool) -> JParser A.T
+satisfy :: (T -> Bool) -> JParser T
 satisfy f = tokenPrim show nextPos
                 (\c -> if f (fst c) then Just (fst c) else Nothing)
 
 -- | Fetch next token and advance
-getT :: JParser A.T
+getT :: JParser T
 getT = tokenPrim show nextPos (Just . fst)
 
 -- | Get the string from a Token context
 -- | Will fail if the Token does not store a String
-getSS :: A.T -> String
-getSS (A.TokIdent   s) = s
-getSS (A.Keyword    s) = s
-getSS (A.Operator   s) = s
+getSS :: T -> String
+getSS (TokIdent   s) = s
+getSS (Keyword    s) = s
+getSS (Operator   s) = s
 getSS _                = error "Non string storing token"
 
-(===) :: A.T -> String -> Bool
+(===) :: T -> String -> Bool
 t === s = getSS t == s
 
--- | Miscellaneous functions
-isIdentifier (A.TokIdent _) = True
+isIdentifier (TokIdent _) = True
 isIdentifier _ = False
 
-isKeyword (A.Keyword _) = True
+isKeyword (Keyword _) = True
 isKeyword _ = False
 
-isPeriod A.Period = True
+isPeriod Period = True
 isPeriod _ = False
 
-isOperator (A.Operator _) = True
+isOperator (Operator _) = True
 isOperator  _ = False
 
-isComma A.Comma = True
+isComma Comma = True
 isComma _ = False
 
-isLSquare A.LSquare = True
+isLSquare LSquare = True
 isLSquare _ = False
 
-isRSquare A.RSquare = True
+isRSquare RSquare = True
 isRSquare _ = False
 
-isLParen A.LParen = True
+isLParen LParen = True
 isLParen _ = False
 
-isRParen A.RParen = True
+isRParen RParen = True
 isRParen _ = False
 
-isSemiColon A.SemiColon = True
+isSemiColon SemiColon = True
 isSemiColon _ = False
 
-isDColon A.DColon = True
+isDColon DColon = True
 isDColon _ = False
 
-isLBrace A.LBrace = True
+isLBrace LBrace = True
 isLBrace _ = False
 
-isRBrace A.RBrace = True
+isRBrace RBrace = True
 isRBrace _ = False
 
 operator s      = satisfy (\x -> isOperator x && x === s)
-keyword kwd     = satisfy (\x -> isKeyword x && (getSS x == kwd))
+keyword kwd     = satisfy (\x -> isKeyword x  && x === kwd)
 
-lessThan        = operator "<"      >> return A.OpLT
-greaterThan     = operator ">"      >> return A.OpGT
-star            = operator "*"      >> return A.OpMult
+lessThan        = operator "<"      >> return OpLT
+greaterThan     = operator ">"      >> return OpGT
+star            = operator "*"      >> return OpMult
 multOp          = star
 
 comma           = satisfy isComma
@@ -90,3 +91,25 @@ rBrace          = satisfy isRBrace
 semiColon       = satisfy isSemiColon
 dot             = satisfy isPeriod
 dColon          = satisfy isDColon
+
+-- | Stores mapping between keyword and class modifier
+classModifierTable :: M.Map String ClassModifier
+classModifierTable = M.fromList [
+    ("public", Public), ("protected", Protected), ("private", Private),
+    ("static", Static), ("final", Final), ("strictfp", StrictFP),
+    ("abstract", Abstract)]
+
+-- | Stores mapping between keyword and field modifier
+fieldModifierTable :: M.Map String FieldModifier
+fieldModifierTable = M.fromList [
+    ("public", PublicF), ("protected", ProtectedF), ("private", PrivateF),
+    ("static", StaticF), ("final", FinalF), ("transient", TransientF),
+    ("volatile", VolatileF)]
+
+-- | Stores mapping between keyword and method modifier
+methodModifierTable :: M.Map String MethodModifier
+methodModifierTable = M.fromList [
+    ("public", PublicM), ("protected", ProtectedM), ("private", PrivateM),
+    ("static", StaticM), ("final", FinalM), ("transient", TransientM),
+    ("synchronized", SynchronizedM), ("native", NativeM),
+    ("strictfp", StrictFPM)]

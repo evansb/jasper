@@ -4,6 +4,7 @@ module Language.Java.Lexer.Internal where
 import Control.Monad.Identity (Identity)
 import Control.Applicative ((<$>), (<*), (*>), (<*>))
 
+import qualified Data.HashSet as S
 import Data.Char (chr, ord, isHexDigit, readLitChar, isAlpha)
 
 import Text.Parsec
@@ -12,12 +13,32 @@ import Text.Parsec.Language
 import Text.Parsec.String
 
 import Language.Java.AST
-import qualified Data.Misc
+
+javaReservedNames = [
+    "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char",
+    "class", "const", "continue", "default", "do", "double", "else", "enum",
+    "extends", "final", "finally", "float", "for", "goto", "if", "implements",
+    "import", "instanceof", "int", "interface", "long", "native", "new",
+    "package", "private", "protected", "public", "return", "short", "static",
+    "strictfp", "super", "switch", "synchronized", "this", "throw", "throws",
+    "transient", "try", "void", "volatile", "while"]
+
+javaReservedOpNames = [
+    "!=", "!", ">>>=", ">>>", ">>=", ">=", ">>", ">",
+    "==", "=", "|", "|=", "||", "&&", "&=", "&", "^=", "^",
+    "%", "%=", "*=", "*", "++", "+=", "+", "--", "-=", "-",
+    "/=", "/", ":", "<<=", "<<", "<=", "<",
+    "?"]
+
+keywordTable = S.fromList javaReservedNames
+operatorTable = S.fromList javaReservedOpNames
+isKeyword = flip S.member keywordTable
+isOperator = flip S.member operatorTable
 
 javaLanguage :: LanguageDef st
 javaLanguage = javaStyle {
-    reservedNames     = Data.Misc.reservedNames,
-    reservedOpNames   = Data.Misc.reservedOpNames,
+    reservedNames     = javaReservedNames,
+    reservedOpNames   = javaReservedOpNames,
     caseSensitive     = True,
     opStart           = oneOf "!%&*+/<=>?^|-:.",
     opLetter          = oneOf "&*+/=^|-"
@@ -30,7 +51,7 @@ identOrKeyword :: Parser Token
 identOrKeyword = do
     p <- getPosition
     s <- identifier
-    return $ if Data.Misc.isKeyword s
+    return $ if isKeyword s
         then (Keyword s, p)
         else (TokIdent s, p)
 
@@ -164,7 +185,7 @@ opLiteral = do
     ohead <- opStart javaLanguage
     obody <- many $ opLetter javaLanguage
     let o = ohead : obody
-    if Data.Misc.isOperator o then
+    if isOperator o then
         return o
     else
         unexpected ("Unknown operator" ++ o)

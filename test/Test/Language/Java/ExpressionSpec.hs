@@ -4,7 +4,7 @@ import Test.Hspec
 import Test.Misc
 
 import Language.Java.AST
-import Language.Java.Parser.Expression
+import Language.Java.Parser.Internal
 
 spec :: Spec
 spec = describe "Primary Expression Parser" $ do

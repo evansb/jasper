@@ -6,7 +6,7 @@ import Test.Misc
 
 import Language.Java.AST (PrimType(..))
 
-import Language.Java.Parser.Type
+import Language.Java.Parser.Internal
 
 spec :: Spec
 spec = describe "Types Parser" $
@@ -21,4 +21,4 @@ spec = describe "Types Parser" $
                   , "double"  `to` DoubleT
                   , "boolean" `to` BooleanT ]
             primType `shouldFailOnJ` [ "Boolean", "Integer", "foo" ]
-            
+

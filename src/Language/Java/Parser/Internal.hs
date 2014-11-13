@@ -5,7 +5,6 @@ import Control.Applicative ((<$>), (*>), (<*), (<*>), pure)
 import qualified Data.Set as S hiding (map)
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
-import Data.Misc
 
 import Text.Parsec.Combinator
 import Text.Parsec.Prim
@@ -194,28 +193,17 @@ staticImportOnDemandDeclaration = StaticImportOnDemandDeclaration
             (star <* semiColon))
 
 -- | Productions from §8 (Classes)
-superClass :: JParser SuperClass
-superClass = keyword "extends" *> classType
 
-superInterfaces :: JParser SuperInterfaces
-superInterfaces = keyword "implements" *> (classType `sepBy1` comma)
-
+-- TODO Add Annotation
 classDeclaration :: JParser ClassDeclaration
 classDeclaration = normalClassDeclaration
 
-classModifiers :: JParser [ClassModifier]
-classModifiers = many classModifier
-
--- TODO Add Annotation
 classModifier :: JParser ClassModifier
 classModifier = do
         tok <- getSS <$> getT
         case M.lookup tok classModifierTable of
             Just modifier -> return modifier
             Nothing -> unexpected "class modifier"
-
-classBody :: JParser ClassBody
-classBody = error "not implemented"
 
 normalClassDeclaration :: JParser ClassDeclaration
 normalClassDeclaration = Class
@@ -226,6 +214,18 @@ normalClassDeclaration = Class
                       <*> optionMaybe superInterfaces
                       <*> classBody
                       <?> "normal class declaration"
+
+classModifiers :: JParser [ClassModifier]
+classModifiers = many classModifier
+
+superClass :: JParser SuperClass
+superClass = keyword "extends" *> classType
+
+superInterfaces :: JParser SuperInterfaces
+superInterfaces = keyword "implements" *> (classType `sepBy1` comma)
+
+classBody :: JParser ClassBody
+classBody = undefined
 
 variableDeclarator :: JParser VariableDeclarator
 variableDeclarator = VariableDeclarator
@@ -356,9 +356,6 @@ typeArgsOrDiamond =  try (TypeArgs <$> typeArgs)
 
 argList :: JParser ArgList
 argList = ArgList <$> expression `sepBy` comma
-
-classBody :: JParser ClassBody
-classBody = undefined
 
 fieldAccess :: JParser Primary
 fieldAccess = FieldAccess <$> choice (map try
