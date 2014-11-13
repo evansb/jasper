@@ -229,6 +229,40 @@ superInterfaces = keyword "implements" *> (classType `sepBy1` comma)
 classBody :: JParser ClassBody
 classBody = undefined
 
+classBodyDeclaration :: JParser ClassBodyDeclaration
+classBodyDeclaration = choice (map try
+                  [ ClassMemberDeclaration <$> classMemberDeclaration
+                  , InstanceInitializer <$> instanceInitializer
+                  , StaticInitializer <$> staticInitializer
+                  , constructorDeclaration
+                  ]) <?> "class body declaration"
+
+classMemberDeclaration :: JParser ClassMemberDeclaration
+classMemberDeclaration = choice (map try
+                 [ fieldDeclaration
+                 , methodDeclaration
+                 , MemberClassDeclaration <$> classDeclaration
+                 , MemberInterfaceDeclaration <$> interfaceDeclaration
+                 , semiColon >> return EmptyClassMember
+                 ]) <?> "class member declration"
+
+fieldDeclaration :: JParser ClassMemberDeclaration
+fieldDeclaration =  FieldDeclaration
+                <$> many fieldModifier
+                <*> unannType
+                <*> variableDeclaratorList
+                <*  semiColon
+
+fieldModifier :: JParser FieldModifier
+fieldModifier = do
+        tok <- getSS <$> getT
+        case M.lookup tok fieldModifierTable of
+            Just modifier -> return modifier
+            Nothing -> unexpected "field modifier"
+
+variableDeclaratorList :: JParser VariableDeclaratorList
+variableDeclaratorList = variableDeclarator `sepBy1` comma
+
 variableDeclarator :: JParser VariableDeclarator
 variableDeclarator = VariableDeclarator
                   <$> variableDeclaratorID
@@ -248,7 +282,7 @@ result :: JParser Result
 result = try (RType <$> unannType)
       <|> (pure RVoid <* keyword "void")
 
-methodDeclaration :: JParser ClassMemberDecl
+methodDeclaration :: JParser ClassMemberDeclaration
 methodDeclaration = MethodDeclaration
                 <$> many methodModifier
                 <*> methodHeader
@@ -347,7 +381,7 @@ instanceInitializer = block
 staticInitializer :: JParser StaticInitializer
 staticInitializer = keyword "static" *> block
 
-constructorDeclaration :: JParser ClassBodyDecl
+constructorDeclaration :: JParser ClassBodyDeclaration
 constructorDeclaration = ConstructorDeclaration
                <$> many constructorModifier
                <*> constructorDeclarator
@@ -403,7 +437,36 @@ primarySuperECI = PrimarySuperECI
        <*> (optionMaybe typeArgs <* keyword "super")
        <*> (lParen *> optionMaybe argList <* rParen <* semiColon)
 
+enumDeclaration :: JParser EnumDeclaration
+enumDeclaration = EnumDeclaration
+       <$> many classModifier
+       <*> (keyword "enum" *> ident)
+       <*> optionMaybe superInterfaces
+       <*> enumBody
 
+enumBody :: JParser EnumBody
+enumBody = between lBrace rBrace (EnumBody
+      <$> (optionMaybe enumConstantList <* optionMaybe comma)
+      <*> optionMaybe enumBodyDeclaration)
+
+enumConstantList :: JParser EnumConstantList
+enumConstantList = enumConstant `sepBy1` comma
+
+enumConstant :: JParser EnumConstant
+enumConstant = EnumConstant
+            <$> many enumConstantModifier
+            <*> ident
+            <*> (fromMaybe Nothing <$> optionMaybe (lParen *>
+                                       optionMaybe argList <* rParen))
+            <*> optionMaybe classBody
+
+enumConstantModifier :: JParser EnumConstantModifier
+enumConstantModifier = undefined
+
+enumBodyDeclaration :: JParser EnumBodyDeclarations
+enumBodyDeclaration = many classBodyDeclaration
+
+interfaceDeclaration = undefined
 
 -- | Statement
 block :: JParser Block

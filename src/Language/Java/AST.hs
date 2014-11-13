@@ -139,21 +139,22 @@ data ClassModifier = Public | Protected | Private | Abstract
                    | Static | Final     | StrictFP
                    PRODUCTION
 
-data ClassBodyDecl = ClassMemberDecl ClassMemberDecl
-                   | InstanceInitializer Block
-                   | StaticInitializer Block
-                   | ConstructorDeclaration [ConstructorModifier]
-                        ConstructorDeclarator (Maybe Throws)
-                        ConstructorBody
-                   PRODUCTION
+data ClassBodyDeclaration = ClassMemberDeclaration ClassMemberDeclaration
+                          | InstanceInitializer Block
+                          | StaticInitializer Block
+                          | ConstructorDeclaration [ConstructorModifier]
+                                ConstructorDeclarator (Maybe Throws)
+                                ConstructorBody
+                          PRODUCTION
 
 type UnannType = Type
 
-data ClassMemberDecl =
+data ClassMemberDeclaration =
             FieldDeclaration  [FieldModifier] UnannType VariableDeclaratorList
           | MethodDeclaration [MethodModifier] MethodHeader MethodBody
           | MemberClassDeclaration ClassDeclaration
           | MemberInterfaceDeclaration ClassDeclaration
+          | EmptyClassMember
           PRODUCTION
 
 data FieldModifier = PublicF | ProtectedF | PrivateF
@@ -246,6 +247,25 @@ data ExplicitConstructorInvocation =
                   | NameSuperECI TypeName (Maybe TypeArgs) (Maybe ArgList)
                   | PrimarySuperECI Primary (Maybe TypeArgs) (Maybe ArgList)
                   PRODUCTION
+
+data EnumDeclaration = EnumDeclaration [ClassModifier]
+                       Ident (Maybe SuperInterfaces) EnumBody
+                     PRODUCTION
+
+data EnumBody = EnumBody (Maybe EnumConstantList) (Maybe EnumBodyDeclarations)
+              PRODUCTION
+
+data EnumConstant = EnumConstant [EnumConstantModifier] Ident
+                        (Maybe ArgList) (Maybe ClassBody)
+                  PRODUCTION
+
+type EnumConstantList = [EnumConstant]
+
+type EnumBodyDeclarations = [ClassBodyDeclaration]
+
+-- | TODO Change to annotation
+data EnumConstantModifier = EnumConstantModifier
+                          PRODUCTION
 
 data InterfaceDeclaration = UInterfaceDecl
                    PRODUCTION
