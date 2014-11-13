@@ -92,24 +92,29 @@ semiColon       = satisfy isSemiColon
 dot             = satisfy isPeriod
 dColon          = satisfy isDColon
 
--- | Stores mapping between keyword and class modifier
+-- | Stores mapping between keyword and class modifier.
 classModifierTable :: M.Map String ClassModifier
 classModifierTable = M.fromList [
     ("public", Public), ("protected", Protected), ("private", Private),
     ("static", Static), ("final", Final), ("strictfp", StrictFP),
     ("abstract", Abstract)]
 
--- | Stores mapping between keyword and field modifier
+-- | Stores mapping between keyword and field modifier.
 fieldModifierTable :: M.Map String FieldModifier
 fieldModifierTable = M.fromList [
     ("public", PublicF), ("protected", ProtectedF), ("private", PrivateF),
     ("static", StaticF), ("final", FinalF), ("transient", TransientF),
     ("volatile", VolatileF)]
 
--- | Stores mapping between keyword and method modifier
+-- | Stores mapping between keyword and method modifier.
 methodModifierTable :: M.Map String MethodModifier
 methodModifierTable = M.fromList [
     ("public", PublicM), ("protected", ProtectedM), ("private", PrivateM),
     ("static", StaticM), ("final", FinalM), ("transient", TransientM),
     ("synchronized", SynchronizedM), ("native", NativeM),
     ("strictfp", StrictFPM)]
+
+-- | Stores mapping between keyword and constructor modifier.
+constructorModifierTable :: M.Map String ConstructorModifier
+constructorModifierTable = M.fromList [
+    ("public", PublicC), ("protected", ProtectedC), ("private", PrivateC)]

@@ -96,6 +96,8 @@ type Dims = Int
 data TypeParam = TypeParam Ident (Maybe TypeBound)
                PRODUCTION
 
+type TypeParams = [TypeParam]
+
 data TypeBound = ExtendsTypeVar TypeVariable
                | ExtendsClassType ClassType [ClassType]
                PRODUCTION
@@ -134,22 +136,24 @@ data ClassDeclaration = Class [ClassModifier] Ident
                       PRODUCTION
 
 data ClassModifier = Public | Protected | Private | Abstract
-                   | Static | Final | StrictFP
+                   | Static | Final     | StrictFP
                    PRODUCTION
 
 data ClassBodyDecl = ClassMemberDecl ClassMemberDecl
-                   | InstanceInitializer
-                   | StaticInitializer
-                   | ConstructorDecl
+                   | InstanceInitializer Block
+                   | StaticInitializer Block
+                   | ConstructorDeclaration [ConstructorModifier]
+                        ConstructorDeclarator (Maybe Throws)
+                        ConstructorBody
                    PRODUCTION
 
 type UnannType = Type
 
 data ClassMemberDecl =
-            FieldDecl  [FieldModifier] UnannType VariableDeclaratorList
-          | MethodDecl [MethodModifier] MethodHeader MethodBody
-          | ClassDecl ClassDeclaration
-          | InterfaceDecl InterfaceDecl
+            FieldDeclaration  [FieldModifier] UnannType VariableDeclaratorList
+          | MethodDeclaration [MethodModifier] MethodHeader MethodBody
+          | MemberClassDeclaration ClassDeclaration
+          | MemberInterfaceDeclaration ClassDeclaration
           PRODUCTION
 
 data FieldModifier = PublicF | ProtectedF | PrivateF
@@ -165,28 +169,40 @@ data VariableDeclarator =
 type VariableDeclID = (Ident, Dims)
 
 data MethodModifier = PublicM | ProtectedM | PrivateM
-                   | StaticM | FinalM | TransientM | SynchronizedM
-                   | NativeM | StrictFPM
+                    | StaticM | FinalM | TransientM | SynchronizedM
+                    | NativeM | StrictFPM
                    PRODUCTION
 
 data Result = RType UnannType
             | RVoid
             PRODUCTION
 
--- Note : This is simplified
-data MethodHeader = MethodHeader
-                    (Maybe [TypeParam])
-                    Result Ident FormalParameterList (Maybe Dims) (Maybe Throws)
+data MethodHeader = MethodHeader Result MethodDeclarator (Maybe Throws)
+                  | MethodHeaderTP TypeParams Result MethodDeclarator
+                    (Maybe Throws)
                   PRODUCTION
 
-data MethodBody = MethodBody
+data MethodDeclarator = MethodDeclarator Ident
+                      (Maybe FormalParameterList) Dims
+                      PRODUCTION
+
+data Throws = Throws ExceptionTypeList
+            PRODUCTION
+
+type ExceptionTypeList = [ExceptionType]
+
+data ExceptionType = ClassTypeEx ClassType
+                   | TypeVariableEx TypeVariable
+                   PRODUCTION
+
+data MethodBody = MethodBody Block
+                | EmptyBody
                 PRODUCTION
 
-type FormalParameterList = [FormalParameter]
+type InstanceInitializer = Block
+type StaticInitializer = Block
 
--- TODO Add Annotation
-data VariableModifier = FinalV
-                      PRODUCTION
+type FormalParameterList = [FormalParameter]
 
 data FormalParameter =
              FormalParameter
@@ -199,16 +215,43 @@ data FormalParameter =
                 [VariableModifier] UnannType [VariableModifier] VariableDeclID
              PRODUCTION
 
+-- TODO Add Annotation
+data VariableModifier = FinalV
+                      | VoidV
+                      PRODUCTION
+
 data VariableInitializer = Expression Expression
                          | ArrayInitializer ArrayInitializer
                          PRODUCTION
 
-data InterfaceDecl = UInterfaceDecl
+-- data ConstructorDeclaration (See ClassMemberDec)
+
+data ConstructorModifier = PublicC | ProtectedC | PrivateC
+                         PRODUCTION
+
+data ConstructorDeclarator = ConstructorDeclarator (Maybe TypeParams)
+                           SimpleTypeName (Maybe FormalParameterList)
+                           PRODUCTION
+
+type SimpleTypeName = Ident
+
+data ConstructorBody = ConstructorBody
+                     (Maybe ExplicitConstructorInvocation)
+                     (Maybe BlockStatements)
+                     PRODUCTION
+
+data ExplicitConstructorInvocation =
+                    ThisECI (Maybe TypeArgs) (Maybe ArgList)
+                  | SuperECI (Maybe TypeArgs) (Maybe ArgList)
+                  | NameSuperECI TypeName (Maybe TypeArgs) (Maybe ArgList)
+                  | PrimarySuperECI Primary (Maybe TypeArgs) (Maybe ArgList)
+                  PRODUCTION
+
+data InterfaceDeclaration = UInterfaceDecl
                    PRODUCTION
 
-data Throws = UThrows
-            PRODUCTION
-
+data BlockStatements = BlockStatements
+                     PRODUCTION
 
 -- | 15. Expressions
 

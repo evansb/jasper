@@ -2,6 +2,7 @@
 module Language.Java.Parser.Internal where
 
 import Control.Applicative ((<$>), (*>), (<*), (<*>), pure)
+import Control.Monad (replicateM)
 import qualified Data.Set as S hiding (map)
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
@@ -71,7 +72,7 @@ aggrClassType = AggrClassType
              <*> ident
              <*> optionMaybe typeArgs
 
-arrayDims :: JParser Int
+arrayDims :: JParser Dims
 arrayDims = length <$> many (lSquare <* rSquare)
 
 arrayType :: JParser ArrayType
@@ -224,6 +225,7 @@ superClass = keyword "extends" *> classType
 superInterfaces :: JParser SuperInterfaces
 superInterfaces = keyword "implements" *> (classType `sepBy1` comma)
 
+-- TODO Resolve this
 classBody :: JParser ClassBody
 classBody = undefined
 
@@ -235,10 +237,180 @@ variableDeclarator = VariableDeclarator
 variableDeclaratorID :: JParser VariableDeclID
 variableDeclaratorID = (,) <$> ident <*> (fromMaybe 0 <$> optionMaybe arrayDims)
 
+-- Unannoted type thing
 
--- TODO Resolve this
+unannType :: JParser UnannType
+unannType = type_
+
+--
+
+result :: JParser Result
+result = try (RType <$> unannType)
+      <|> (pure RVoid <* keyword "void")
+
+methodDeclaration :: JParser ClassMemberDecl
+methodDeclaration = MethodDeclaration
+                <$> many methodModifier
+                <*> methodHeader
+                <*> methodBody
+                <?> "method declaration"
+
+methodDeclarator :: JParser MethodDeclarator
+methodDeclarator = MethodDeclarator
+                <$> ident
+                <*> (lParen *> optionMaybe formalParameterList <* rParen)
+                <*> (fromMaybe 0 <$> optionMaybe arrayDims)
+                <?> "method declarator"
+
+methodHeader :: JParser MethodHeader
+methodHeader = try methodHeaderWithoutTP
+            <|> methodHeaderTP
+
+methodHeaderWithoutTP :: JParser MethodHeader
+methodHeaderWithoutTP = MethodHeader
+                <$> result
+                <*> methodDeclarator
+                <*> optionMaybe throws
+
+methodHeaderTP :: JParser MethodHeader
+methodHeaderTP = MethodHeaderTP
+                <$> typeParams
+                <*> result
+                <*> methodDeclarator
+                <*> optionMaybe throws
+
+methodModifier :: JParser MethodModifier
+methodModifier = do
+        tok <- getSS <$> getT
+        case M.lookup tok methodModifierTable of
+            Just modifier -> return modifier
+            Nothing -> unexpected "method modifier"
+
+formalParameterList :: JParser FormalParameterList
+formalParameterList = (\x y -> x ++ [y])
+                   <$> formalParameter `sepEndBy` comma
+                   <*> lastFormalParameter
+
+formalParameters :: JParser [FormalParameter]
+formalParameters = choice
+            [ (:) <$> formalParameter <*> many (comma *> formalParameter)
+            , (:) <$> receiverParameter <*> many (comma *> formalParameter)]
+
+formalParameter :: JParser FormalParameter
+formalParameter = FormalParameter
+               <$> many variableModifier
+               <*> unannType
+               <*> variableDeclaratorID
+
+-- TODO Add annotation
+variableModifier :: JParser VariableModifier
+variableModifier = keyword "final" >> return FinalV
+
+lastFormalParameter :: JParser FormalParameter
+lastFormalParameter =  try ellipsisParameter
+                   <|> formalParameter
+
+ellipsisParameter :: JParser FormalParameter
+ellipsisParameter =  EllipsisParameter
+                 <$> many variableModifier
+                 <*> unannType
+                 <*> many variableModifier
+                 <*> (replicateM 3 dot *> variableDeclaratorID)
+
+receiverParameter :: JParser FormalParameter
+receiverParameter =  ReceiverParameter
+                 <$> many variableModifier
+                 <*> unannType
+                 <*> optionMaybe (ident <* dot)
+                 <*  this
+
+throws :: JParser Throws
+throws = Throws <$> (keyword "throws" *> exceptionTypeList)
+
+exceptionTypeList :: JParser ExceptionTypeList
+exceptionTypeList = exceptionType `sepBy1` comma
+
+exceptionType :: JParser ExceptionType
+exceptionType =   try (ClassTypeEx <$> classType)
+             <|> (TypeVariableEx  <$> typeVariable)
+
 typeDeclaration :: JParser TypeDeclaration
 typeDeclaration = undefined
+
+methodBody :: JParser MethodBody
+methodBody =  (semiColon >> return EmptyBody)
+          <|> (MethodBody <$> block)
+
+instanceInitializer :: JParser InstanceInitializer
+instanceInitializer = block
+
+staticInitializer :: JParser StaticInitializer
+staticInitializer = keyword "static" *> block
+
+constructorDeclaration :: JParser ClassBodyDecl
+constructorDeclaration = ConstructorDeclaration
+               <$> many constructorModifier
+               <*> constructorDeclarator
+               <*> optionMaybe throws
+               <*> constructorBody
+               <?> "constructor declaration"
+
+constructorModifier :: JParser ConstructorModifier
+constructorModifier = do
+        tok <- getSS <$> getT
+        case M.lookup tok constructorModifierTable of
+            Just modifier -> return modifier
+            Nothing -> unexpected "constructor modifier"
+
+simpleTypeName :: JParser SimpleTypeName
+simpleTypeName = ident
+
+constructorDeclarator :: JParser ConstructorDeclarator
+constructorDeclarator = ConstructorDeclarator
+              <$> optionMaybe typeParams
+              <*> simpleTypeName
+              <*> (lParen *> optionMaybe formalParameterList <* rParen)
+              <?> "constructor declarator"
+
+constructorBody :: JParser ConstructorBody
+constructorBody = between lBrace rBrace (ConstructorBody
+              <$> optionMaybe explicitConstructorInvocation
+              <*> optionMaybe blockStatements)
+
+explicitConstructorInvocation :: JParser ExplicitConstructorInvocation
+explicitConstructorInvocation = choice (map try [thisECI, superECI,
+                                nameSuperECI, primarySuperECI])
+
+thisECI :: JParser ExplicitConstructorInvocation
+thisECI = ThisECI
+       <$> (optionMaybe typeArgs <* keyword "this")
+       <*> (lParen *> optionMaybe argList <* rParen <* semiColon)
+
+superECI :: JParser ExplicitConstructorInvocation
+superECI = SuperECI
+       <$> (optionMaybe typeArgs <* keyword "super")
+       <*> (lParen *> optionMaybe argList <* rParen <* semiColon)
+
+nameSuperECI :: JParser ExplicitConstructorInvocation
+nameSuperECI = NameSuperECI
+       <$>  typeNameDot
+       <*> (optionMaybe typeArgs <* keyword "super")
+       <*> (lParen *> optionMaybe argList <* rParen <* semiColon)
+
+primarySuperECI :: JParser ExplicitConstructorInvocation
+primarySuperECI = PrimarySuperECI
+       <$> (primary <* dot)
+       <*> (optionMaybe typeArgs <* keyword "super")
+       <*> (lParen *> optionMaybe argList <* rParen <* semiColon)
+
+
+
+-- | Statement
+block :: JParser Block
+block = undefined
+
+blockStatements :: JParser BlockStatements
+blockStatements = undefined
 
 -- | Java Expressions
 primary :: JParser Primary
