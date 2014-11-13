@@ -127,17 +127,25 @@ data TypeDeclaration = ClassDeclaration
 
 -- | 8. Classes
 
-type SuperClass = ClassType
-type SuperInterfaces = [ClassType]
+data SuperClass = Extends ClassType
+                PRODUCTION
+
+type InterfaceTypeList = [ClassType]
+data SuperInterfaces = Implements InterfaceTypeList
+                     PRODUCTION
 
 data ClassDeclaration = Class [ClassModifier] Ident
                       (Maybe [TypeParam]) (Maybe SuperClass)
                       (Maybe SuperInterfaces) ClassBody
                       PRODUCTION
 
-data ClassModifier = Public | Protected | Private | Abstract
-                   | Static | Final     | StrictFP
-                   PRODUCTION
+data Modifier = Public    | Protected    | Private   | Abstract
+              | Static    | Final        | StrictFP  | Volatile
+              | Transient | Synchronized | Native    | Interface
+              | Default
+              PRODUCTION
+
+type ClassModifier = Modifier
 
 data ClassBodyDeclaration = ClassMemberDeclaration ClassMemberDeclaration
                           | InstanceInitializer Block
@@ -153,13 +161,11 @@ data ClassMemberDeclaration =
             FieldDeclaration  [FieldModifier] UnannType VariableDeclaratorList
           | MethodDeclaration [MethodModifier] MethodHeader MethodBody
           | MemberClassDeclaration ClassDeclaration
-          | MemberInterfaceDeclaration ClassDeclaration
+          | MemberInterfaceDeclaration InterfaceDeclaration
           | EmptyClassMember
           PRODUCTION
 
-data FieldModifier = PublicF | ProtectedF | PrivateF
-                   | StaticF | FinalF | TransientF | VolatileF
-                   PRODUCTION
+type FieldModifier = Modifier
 
 type VariableDeclaratorList = [VariableDeclarator]
 
@@ -169,10 +175,7 @@ data VariableDeclarator =
 
 type VariableDeclID = (Ident, Dims)
 
-data MethodModifier = PublicM | ProtectedM | PrivateM
-                    | StaticM | FinalM | TransientM | SynchronizedM
-                    | NativeM | StrictFPM
-                   PRODUCTION
+type MethodModifier = Modifier
 
 data Result = RType UnannType
             | RVoid
@@ -227,8 +230,7 @@ data VariableInitializer = Expression Expression
 
 -- data ConstructorDeclaration (See ClassMemberDec)
 
-data ConstructorModifier = PublicC | ProtectedC | PrivateC
-                         PRODUCTION
+type ConstructorModifier = Modifier
 
 data ConstructorDeclarator = ConstructorDeclarator (Maybe TypeParams)
                            SimpleTypeName (Maybe FormalParameterList)
@@ -267,11 +269,34 @@ type EnumBodyDeclarations = [ClassBodyDeclaration]
 data EnumConstantModifier = EnumConstantModifier
                           PRODUCTION
 
-data InterfaceDeclaration = UInterfaceDecl
-                   PRODUCTION
+-- | 9. Interfaces
+data InterfaceDeclaration = NormalInterface [InterfaceModifier] Ident
+                            (Maybe TypeParams) (Maybe ExtendsInterfaces)
+                             InterfaceBody
+                          PRODUCTION
+
+type InterfaceModifier = Modifier
+
+data ExtendsInterfaces = ExtendsInterfaces InterfaceTypeList
+                       PRODUCTION
+
+type InterfaceBody = [InterfaceMemberDeclaration]
+
+data InterfaceMemberDeclaration =
+          ConstantDeclaration [ConstantModifier] UnannType
+           VariableDeclaratorList
+        | InterfaceMethodDeclaration [InterfaceMethodModifier]
+            MethodHeader MethodBody
+        | InterfaceClassDeclaration ClassDeclaration
+        | InnerInterfaceDeclaration InterfaceDeclaration
+        PRODUCTION
+
+type ConstantModifier = Modifier
 
 data BlockStatements = BlockStatements
                      PRODUCTION
+
+type InterfaceMethodModifier = Modifier
 
 -- | 15. Expressions
 

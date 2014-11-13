@@ -4,7 +4,6 @@ module Language.Java.Parser.Internal where
 import Control.Applicative ((<$>), (*>), (<*), (<*>), pure)
 import Control.Monad (replicateM)
 import qualified Data.Set as S hiding (map)
-import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 
 import Text.Parsec.Combinator
@@ -200,11 +199,7 @@ classDeclaration :: JParser ClassDeclaration
 classDeclaration = normalClassDeclaration
 
 classModifier :: JParser ClassModifier
-classModifier = do
-        tok <- getSS <$> getT
-        case M.lookup tok classModifierTable of
-            Just modifier -> return modifier
-            Nothing -> unexpected "class modifier"
+classModifier = fromModifierTable classModifierTable
 
 normalClassDeclaration :: JParser ClassDeclaration
 normalClassDeclaration = Class
@@ -220,10 +215,13 @@ classModifiers :: JParser [ClassModifier]
 classModifiers = many classModifier
 
 superClass :: JParser SuperClass
-superClass = keyword "extends" *> classType
+superClass = Extends <$> (keyword "extends" *> classType)
+
+interfaceTypeList :: JParser InterfaceTypeList
+interfaceTypeList = classType `sepBy1` comma
 
 superInterfaces :: JParser SuperInterfaces
-superInterfaces = keyword "implements" *> (classType `sepBy1` comma)
+superInterfaces = Implements <$> (keyword "implements" *> interfaceTypeList)
 
 -- TODO Resolve this
 classBody :: JParser ClassBody
@@ -254,11 +252,7 @@ fieldDeclaration =  FieldDeclaration
                 <*  semiColon
 
 fieldModifier :: JParser FieldModifier
-fieldModifier = do
-        tok <- getSS <$> getT
-        case M.lookup tok fieldModifierTable of
-            Just modifier -> return modifier
-            Nothing -> unexpected "field modifier"
+fieldModifier = fromModifierTable fieldModifierTable
 
 variableDeclaratorList :: JParser VariableDeclaratorList
 variableDeclaratorList = variableDeclarator `sepBy1` comma
@@ -314,11 +308,7 @@ methodHeaderTP = MethodHeaderTP
                 <*> optionMaybe throws
 
 methodModifier :: JParser MethodModifier
-methodModifier = do
-        tok <- getSS <$> getT
-        case M.lookup tok methodModifierTable of
-            Just modifier -> return modifier
-            Nothing -> unexpected "method modifier"
+methodModifier = fromModifierTable methodModifierTable
 
 formalParameterList :: JParser FormalParameterList
 formalParameterList = (\x y -> x ++ [y])
@@ -390,11 +380,7 @@ constructorDeclaration = ConstructorDeclaration
                <?> "constructor declaration"
 
 constructorModifier :: JParser ConstructorModifier
-constructorModifier = do
-        tok <- getSS <$> getT
-        case M.lookup tok constructorModifierTable of
-            Just modifier -> return modifier
-            Nothing -> unexpected "constructor modifier"
+constructorModifier = fromModifierTable constructorModifierTable
 
 simpleTypeName :: JParser SimpleTypeName
 simpleTypeName = ident
@@ -466,7 +452,55 @@ enumConstantModifier = undefined
 enumBodyDeclaration :: JParser EnumBodyDeclarations
 enumBodyDeclaration = many classBodyDeclaration
 
-interfaceDeclaration = undefined
+-- | Productions from 9 (Interfaces)
+interfaceDeclaration :: JParser InterfaceDeclaration
+interfaceDeclaration = normalInterfaceDeclaration
+                    <?> "interface declaration"
+
+normalInterfaceDeclaration :: JParser InterfaceDeclaration
+normalInterfaceDeclaration =  NormalInterface
+                          <$> many interfaceModifier
+                          <*> (keyword "interface" *> ident)
+                          <*> optionMaybe typeParams
+                          <*> optionMaybe extendsInterfaces
+                          <*> interfaceBody
+
+interfaceModifier :: JParser InterfaceModifier
+interfaceModifier = fromModifierTable interfaceModifierTable
+
+extendsInterfaces :: JParser ExtendsInterfaces
+extendsInterfaces = ExtendsInterfaces <$> interfaceTypeList
+
+interfaceBody :: JParser InterfaceBody
+interfaceBody = between lParen rParen (many interfaceMemberDeclaration)
+
+interfaceMemberDeclaration :: JParser InterfaceMemberDeclaration
+interfaceMemberDeclaration = choice
+                   [ constantDeclaration
+                   , interfaceMethodDeclaration
+                   , InterfaceClassDeclaration  <$> classDeclaration
+                   , InnerInterfaceDeclaration  <$> interfaceDeclaration
+                   ] <?> "interface member declaration"
+
+constantDeclaration :: JParser InterfaceMemberDeclaration
+constantDeclaration =  ConstantDeclaration
+                   <$> many constantModifier
+                   <*> unannType
+                   <*> variableDeclaratorList
+                   <*  semiColon
+
+constantModifier :: JParser ConstantModifier
+constantModifier = fromModifierTable constantModifierTable
+
+interfaceMethodDeclaration :: JParser InterfaceMemberDeclaration
+interfaceMethodDeclaration =  InterfaceMethodDeclaration
+                          <$> many interfaceMethodModifier
+                          <*> methodHeader
+                          <*> methodBody
+
+
+interfaceMethodModifier :: JParser InterfaceMethodModifier
+interfaceMethodModifier = fromModifierTable interfaceMethodModifierTable
 
 -- | Statement
 block :: JParser Block

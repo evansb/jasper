@@ -1,8 +1,10 @@
-
+{-# LANGUAGE DoAndIfThenElse #-}
 module Language.Java.Parser.Core where
 
+import Control.Applicative ((<$>))
 import Text.Parsec hiding (satisfy)
 import qualified Data.Map as M
+import qualified Data.HashSet as S
 
 import Language.Java.AST
 
@@ -29,7 +31,7 @@ getSS :: T -> String
 getSS (TokIdent   s) = s
 getSS (Keyword    s) = s
 getSS (Operator   s) = s
-getSS _                = error "Non string storing token"
+getSS _              = error "Non string storing token"
 
 (===) :: T -> String -> Bool
 t === s = getSS t == s
@@ -92,29 +94,56 @@ semiColon       = satisfy isSemiColon
 dot             = satisfy isPeriod
 dColon          = satisfy isDColon
 
--- | Stores mapping between keyword and class modifier.
-classModifierTable :: M.Map String ClassModifier
-classModifierTable = M.fromList [
+fromModifierTable :: S.HashSet String -> JParser Modifier
+fromModifierTable whiteList = do
+        tok <- getSS <$> getT
+        if tok `S.member` whiteList then
+            case M.lookup tok modifierTable of
+                Just modifier -> return modifier
+                Nothing       -> unexpected "invalid modifier"
+        else unexpected "invalid modifier"
+
+-- | Stores valid keywords for class modifier.
+modifierTable :: M.Map String Modifier
+modifierTable = M.fromList [
     ("public", Public), ("protected", Protected), ("private", Private),
     ("static", Static), ("final", Final), ("strictfp", StrictFP),
-    ("abstract", Abstract)]
+    ("abstract", Abstract), ("volatile", Volatile), ("transient", Transient),
+    ("synchronized", Synchronized), ("native", Native), ("interface", Interface),
+    ("default", Default)]
 
--- | Stores mapping between keyword and field modifier.
-fieldModifierTable :: M.Map String FieldModifier
-fieldModifierTable = M.fromList [
-    ("public", PublicF), ("protected", ProtectedF), ("private", PrivateF),
-    ("static", StaticF), ("final", FinalF), ("transient", TransientF),
-    ("volatile", VolatileF)]
+-- | Stores valid keywords for class modifier.
+classModifierTable :: S.HashSet String
+classModifierTable = S.fromList
+    ["public", "protected", "private", "static", "strictfp", "abstract",
+     "final"]
 
--- | Stores mapping between keyword and method modifier.
-methodModifierTable :: M.Map String MethodModifier
-methodModifierTable = M.fromList [
-    ("public", PublicM), ("protected", ProtectedM), ("private", PrivateM),
-    ("static", StaticM), ("final", FinalM), ("transient", TransientM),
-    ("synchronized", SynchronizedM), ("native", NativeM),
-    ("strictfp", StrictFPM)]
+-- | Stores valid keywords for interface modifier.
+interfaceModifierTable :: S.HashSet String
+interfaceModifierTable = S.fromList
+    ["public", "protected", "private" , "static", "strictfp" , "abstract"]
 
--- | Stores mapping between keyword and constructor modifier.
-constructorModifierTable :: M.Map String ConstructorModifier
-constructorModifierTable = M.fromList [
-    ("public", PublicC), ("protected", ProtectedC), ("private", PrivateC)]
+-- | Stores valid keywords for interface method modifier.
+interfaceMethodModifierTable :: S.HashSet String
+interfaceMethodModifierTable = S.fromList
+    ["public", "static", "strictfp" , "abstract", "default"]
+
+-- | Stores valid keywords for field modifier.
+fieldModifierTable :: S.HashSet String
+fieldModifierTable = S.fromList
+    ["public", "protected", "private", "static", "final", "transient",
+     "volatile"]
+
+-- | Stores valid keywords for method modifier.
+methodModifierTable :: S.HashSet String
+methodModifierTable = S.fromList
+    ["public", "protected", "private", "static", "final", "transient",
+     "volatile", "synchronized", "native", "strictfp"]
+
+-- | Stores valid keywords for constructor modifier.
+constructorModifierTable :: S.HashSet String
+constructorModifierTable = S.fromList ["public", "protected", "private"]
+
+-- | Stores valid keywords for constants modifier.
+constantModifierTable :: S.HashSet String
+constantModifierTable = S.fromList ["public", "static", "final"]
