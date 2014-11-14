@@ -502,12 +502,115 @@ interfaceMethodDeclaration =  InterfaceMethodDeclaration
 interfaceMethodModifier :: JParser InterfaceMethodModifier
 interfaceMethodModifier = fromModifierTable interfaceMethodModifierTable
 
+-- | Productions from 14 (Blocks and Statements)
+
 -- | Statement
 block :: JParser Block
-block = undefined
+block = do
+        bs <- lBrace *> optionMaybe blockStatements <* rBrace
+        return $ case bs of
+            Just b -> Block b
+            Nothing -> EmptyBlock
 
 blockStatements :: JParser BlockStatements
-blockStatements = undefined
+blockStatements = many1 blockStatement
+
+blockStatement :: JParser BlockStatement
+blockStatement = choice
+              [ LocalVariableDeclarationStmt <$>
+                    (localVariableDeclaration <* semiColon)
+              , ClassDeclarationStmt <$> classDeclaration
+              , Statement <$> statement
+              ] <?> "block statement"
+
+localVariableDeclaration :: JParser LocalVariableDeclaration
+localVariableDeclaration = LocalVariableDeclaration
+             <$> many variableModifier
+             <*> unannType
+             <*> variableDeclaratorList
+             <?> "local variable declaration"
+
+statement :: JParser Statement
+statement = undefined
+
+statementNSI :: JParser StatementNSI
+statementNSI = undefined
+
+statementWTS :: JParser StatementWTS
+statementWTS = undefined
+
+emptyStatement :: JParser StatementWTS
+emptyStatement = semiColon >> pure EmptyStmt
+
+labeledStmt :: JParser Statement
+labeledStmt = LabeledStmt <$> ident <*> (operator ":" *> statement)
+
+labeledStmtNSI :: JParser StatementNSI
+labeledStmtNSI = LabeledStmtNSI <$> ident <*> (operator ":" *> statementNSI)
+
+expressionStmt :: JParser StatementWTS
+expressionStmt = undefined
+
+ifThenStmt :: JParser Statement
+ifThenStmt =  keyword "if" *> (IfThenStmt
+          <$> (lParen *> expression <* rParen)
+          <*> statement)
+
+ifThenElseStmt :: JParser Statement
+ifThenElseStmt = keyword "if" *> (IfThenElseStmt
+          <$> (lParen *> expression <* rParen)
+          <*> statementNSI
+          <*> (keyword "else" *> statement))
+
+assertStmt :: JParser StatementWTS
+assertStmt = AssertStmt <$> (keyword "assert" *> expression <* semiColon)
+
+assertLblStmt :: JParser StatementWTS
+assertLblStmt = AssertLblStmt
+             <$> (keyword "assert" *> expression)
+             <*> (operator ":" *> expression <* semiColon)
+
+switchStmt :: JParser StatementWTS
+switchStmt = keyword "switch" *> (SwitchStmt
+          <$> (lParen *> expression <* rParen)
+          <*> switchBlock)
+
+switchBlock :: JParser SwitchBlock
+switchBlock = lBrace *> (SwitchBlock
+           <$> many switchBlockStmtGrp
+           <*> many switchLabel) <* rBrace
+
+switchBlockStmtGrp :: JParser SwitchBlockStmtGrp
+switchBlockStmtGrp = SwitchBlockStmtGrp <$> switchLabels <*> blockStatements
+
+switchLabels :: JParser SwitchLabels
+switchLabels = many1 switchLabel
+
+switchLabel :: JParser SwitchLabel
+switchLabel = choice
+        [ keyword "case" *> (CaseExpr <$> constantExpression) <* operator ":"
+        , keyword "case" *> (CaseEnum <$> enumConstantName)   <* operator ":"
+        , keyword "default" *> operator ":" *> CaseDefault
+        ]
+
+enumConstantName :: JParser EnumConstantName
+enumConstantName = ident
+
+whileStmt :: JParser Statement
+whileStmt = keyword "while" *> (WhileStmt
+          <$> (lParen *> expression <* rParen)
+          <*> statement)
+
+whileStmtNSI :: JParser StatementNSI
+whileStmtNSI = keyword "while" *> (WhileStmtNSI
+          <$> (lParen *> expression <* rParen)
+          <*> statementNSI)
+
+doStmt :: JParser StatementWTS
+doStmt = keyword "do" *> (DoStmt
+         <$> statement
+         <*> (keyword "while" *> lParen *>
+                expression <* rParen <* semiColon))
 
 -- | Java Expressions
 primary :: JParser Primary
@@ -545,14 +648,14 @@ literal :: JParser Primary
 literal = Literal <$> do
        tok <- getT
        case tok of
-        TokInt t -> return $ IntegerLiteral t
-        TokFloat s -> return $ FloatingPointLiteral s
+        TokInt t    -> return $ IntegerLiteral t
+        TokFloat s  -> return $ FloatingPointLiteral s
         TokDouble s -> return $ FloatingPointLiteral s
-        TokLong t -> return $ IntegerLiteral t
-        TokChar s -> return $ CharacterLiteral s
+        TokLong t   -> return $ IntegerLiteral t
+        TokChar s   -> return $ CharacterLiteral s
         TokString s -> return $ StringLiteral s
-        TokNull -> return NullLiteral
-        s -> unexpected (show s)
+        TokNull     -> return NullLiteral
+        s           -> unexpected (show s)
        <?> "literal"
 
 -- | Java name followed by a .class
@@ -567,7 +670,7 @@ typeNameDotClass = TypeNameDotClass
 typeNameArrDotClass :: JParser Primary
 typeNameArrDotClass = TypeNameArrDotClass
         <$> typeName
-        <*> (length <$> many (lSquare >> rSquare))
+        <*> arrayDims
         <*  dot <* keyword "class"
         <?> "typename[].class"
 
@@ -741,13 +844,13 @@ primTypeACE :: JParser ArrayCreationExpr
 primTypeACE = PrimTypeACE
         <$> (keyword "new" *> primType)
         <*> dimExprs
-        <*> (length <$> many dims)
+        <*> arrayDims
 
 classTypeACE :: JParser ArrayCreationExpr
 classTypeACE = ClassTypeACE
         <$> (keyword "new" *> classType)
         <*> dimExprs
-        <*> (length <$> many dims)
+        <*> arrayDims
 
 primTypeACEI :: JParser ArrayCreationExpr
 primTypeACEI = PrimTypeACEI

@@ -292,14 +292,117 @@ data InterfaceMemberDeclaration =
         PRODUCTION
 
 type ConstantModifier = Modifier
-
-data BlockStatements = BlockStatements
-                     PRODUCTION
-
 type InterfaceMethodModifier = Modifier
 
--- | 15. Expressions
+-- | 14. Blocks and Statements
+data Block = Block BlockStatements
+           | EmptyBlock
+           PRODUCTION
 
+type BlockStatements = [BlockStatement]
+
+data BlockStatement = LocalVariableDeclarationStmt LocalVariableDeclaration
+                    | ClassDeclarationStmt ClassDeclaration
+                    | Statement Statement
+                    PRODUCTION
+
+data LocalVariableDeclaration = LocalVariableDeclaration [VariableModifier]
+                              UnannType VariableDeclaratorList
+                              PRODUCTION
+
+data Statement = StatementWTS StatementWTS
+               | LabeledStmt Ident Statement
+               | IfThenStmt Expression Statement
+               | IfThenElseStmt StatementNSI Statement
+               | WhileStmt Expression Statement
+               | ForStmt ForStatement
+               PRODUCTION
+
+data StatementNSI = StatementWTSNSI StatementWTS
+                  | LabeledStmtNSI Ident StatementNSI
+                  | IfThenElseStmtNSI StatementNSI StatementNSI
+                  | WhileStmtNSI Expression StatementNSI
+                  | ForStmtNSI ForStatementNSI
+               PRODUCTION
+
+data StatementWTS = BlockStmt Block
+                  | EmptyStmt
+                  | ExpressionStmt StatementExpression
+                  | AssertStmt Expression
+                  | AssertLblStmt Expression Expression
+                  | SwitchStmt Expression SwitchBlock
+                  | DoStmt Statement Expression
+                  | BreakStmt Ident
+                  | ContinueStmt Ident
+                  | ReturnStmt Ident
+                  | SynchronizedStmt Expression Block
+                  | ThrowStmt Expression
+                  | TryStmt TryStmt
+                  PRODUCTION
+
+data StatementExpression = AssignmentStmt Assignment
+                         | PreIncrementStmt
+                         | PreDecrementStmt
+                         | PostIncrementStmt
+                         | PostDecrementStmt
+                         | MethodInvocationStmt MethodInvocation
+                         | ClassInstanceCreationStmt ClassInstanceCreation
+                         PRODUCTION
+
+data SwitchBlock = SwitchBlock [SwitchBlockStmtGrp] [SwitchLabel]
+                 PRODUCTION
+
+data SwitchBlockStmtGrp = SwitchBlockStmtGrp SwitchLabels BlockStatements
+                        PRODUCTION
+
+data ForInit = ForInitExpr StatementExpressionList
+             | ForInitDecl LocalVariableDeclaration
+             PRODUCTION
+
+type StatementExpressionList = [StatementExpression]
+type ForUpdate = StatementExpressionList
+type SwitchLabels = [SwitchLabel]
+
+data SwitchLabel = CaseExpr ConstantExpression
+                 | CaseEnum EnumConstantName
+                 | CaseDefault
+                 PRODUCTION
+
+type EnumConstantName = Ident
+
+data ForStatement = BasicFor ForInit Expression ForUpdate Statement
+                  | EnhancedFor [VariableModifier] UnannType VariableDeclID
+                    Expression
+                  PRODUCTION
+
+data ForStatementNSI = BasicForNSI ForInit Expression ForUpdate StatementNSI
+                     | EnhancedForNSI [VariableModifier] UnannType VariableDeclID
+                       Expression
+                     PRODUCTION
+
+data TryStmt = TryCatch Block Catches
+             | TryFinally Block (Maybe Catches) Finally
+             | TryWithResources ResourceSpecification Block
+                (Maybe Catches) (Maybe Finally)
+             PRODUCTION
+
+type Finally = Block
+type Catches = [CatchClause]
+
+data CatchClause = CatchClause CatchFormalParameter Block
+                 PRODUCTION
+
+data CatchFormalParameter = CatchFormalParameter [VariableModifier] CatchType
+                          VariableDeclID
+                          PRODUCTION
+
+type CatchType = [ClassType]
+type ResourceSpecification = ResourceList
+type ResourceList = [Resource]
+data Resource = Resource [VariableModifier] UnannType VariableDeclID Expression
+              PRODUCTION
+
+-- | 15. Expressions
 data Expression = LambdaExpression LambdaParameters LambdaBody
                 | AssignmentExpression
                 PRODUCTION
@@ -424,9 +527,6 @@ data LHS = LHSExpr  Primary
 
 data Assignment = Assignment LHS T Expression
                 PRODUCTION
-
-data Block = Block
-           PRODUCTION
 
 data PostfixExpr = PrimPostfixExpr Primary
                  | NamePostfixExpr TypeName
