@@ -549,7 +549,10 @@ labeledStmtNSI :: JParser StatementNSI
 labeledStmtNSI = LabeledStmtNSI <$> ident <*> (operator ":" *> statementNSI)
 
 expressionStmt :: JParser StatementWTS
-expressionStmt = undefined
+expressionStmt = ExpressionStmt <$> statementExpression <* semiColon
+
+statementExpression :: JParser StatementExpression
+statementExpression = undefined
 
 ifThenStmt :: JParser Statement
 ifThenStmt =  keyword "if" *> (IfThenStmt
@@ -561,6 +564,12 @@ ifThenElseStmt = keyword "if" *> (IfThenElseStmt
           <$> (lParen *> expression <* rParen)
           <*> statementNSI
           <*> (keyword "else" *> statement))
+
+ifThenElseStmtNSI :: JParser StatementNSI
+ifThenElseStmtNSI = keyword "if" *> (IfThenElseStmtNSI
+          <$> (lParen *> expression <* rParen)
+          <*> statementNSI
+          <*> (keyword "else" *> statementNSI))
 
 assertStmt :: JParser StatementWTS
 assertStmt = AssertStmt <$> (keyword "assert" *> expression <* semiColon)
@@ -590,7 +599,7 @@ switchLabel :: JParser SwitchLabel
 switchLabel = choice
         [ keyword "case" *> (CaseExpr <$> constantExpression) <* operator ":"
         , keyword "case" *> (CaseEnum <$> enumConstantName)   <* operator ":"
-        , keyword "default" *> operator ":" *> CaseDefault
+        , keyword "default" *> operator ":" *> return CaseDefault
         ]
 
 enumConstantName :: JParser EnumConstantName
@@ -611,6 +620,116 @@ doStmt = keyword "do" *> (DoStmt
          <$> statement
          <*> (keyword "while" *> lParen *>
                 expression <* rParen <* semiColon))
+
+basicForStmt :: JParser ForStatement
+basicForStmt =  keyword "for" *> (BasicFor
+            <$> (lParen *> optionMaybe forInit <* semiColon)
+            <*> (optionMaybe expression <* semiColon)
+            <*> (optionMaybe forUpdate <* rParen)
+            <*> statement)
+
+basicForStmtNSI :: JParser ForStatementNSI
+basicForStmtNSI =  keyword "for" *> (BasicForNSI
+               <$> (lParen *> optionMaybe forInit <* semiColon)
+               <*> (optionMaybe expression <* semiColon)
+               <*> (optionMaybe forUpdate <* rParen)
+               <*> statementNSI)
+
+enhancedForStmt :: JParser ForStatement
+enhancedForStmt =  keyword "for" *> (EnhancedFor
+               <$> (lParen *> many variableModifier)
+               <*> unannType
+               <*> variableDeclaratorID
+               <*> (operator ":" *> expression <* rParen)
+               <*> statement)
+
+enhancedForStmtNSI :: JParser ForStatementNSI
+enhancedForStmtNSI =  keyword "for" *> (EnhancedForNSI
+               <$> (lParen *> many variableModifier)
+               <*> unannType
+               <*> variableDeclaratorID
+               <*> (operator ":" *> expression <* rParen)
+               <*> statementNSI)
+
+forInit :: JParser ForInit
+forInit = choice
+        [ ForInitExpr <$> statementExpressionList
+        , ForInitDecl <$> localVariableDeclaration
+        ]
+
+forUpdate :: JParser ForUpdate
+forUpdate = statementExpressionList
+
+statementExpressionList :: JParser StatementExpressionList
+statementExpressionList = statementExpression `sepBy1` comma
+
+breakStmt :: JParser StatementWTS
+breakStmt = BreakStmt <$> (keyword "break" *> optionMaybe ident <* semiColon)
+
+continueStmt :: JParser StatementWTS
+continueStmt = ContinueStmt
+            <$> (keyword "continue" *> optionMaybe ident <* semiColon)
+
+returnStmt :: JParser StatementWTS
+returnStmt = ReturnStmt
+          <$> (keyword "return" *> optionMaybe expression <* semiColon)
+
+throwStmt :: JParser StatementWTS
+throwStmt = ThrowStmt <$> (keyword "throw" *> expression <* semiColon)
+
+synchronizedStmt :: JParser StatementWTS
+synchronizedStmt = keyword "synchronized" *> (SynchronizedStmt
+                <$> (lParen *> expression <* rParen)
+                <*> block)
+
+tryStmt :: JParser TryStmt
+tryStmt = choice
+        [ keyword "try" *> (TryCatch <$> block <*> catches)
+        , keyword "try" *> (TryFinally <$> block <*> optionMaybe catches
+                           <*> finally)
+        , tryWithResources
+        ]
+
+catches :: JParser Catches
+catches = many1 catchClause
+
+catchClause :: JParser CatchClause
+catchClause = keyword "catch" *> (CatchClause
+           <$> (lParen *> catchFormalParameter <* rParen)
+           <*> block)
+
+catchFormalParameter :: JParser CatchFormalParameter
+catchFormalParameter = CatchFormalParameter
+                    <$> many variableModifier
+                    <*> catchType
+                    <*> variableDeclaratorID
+
+catchType :: JParser CatchType
+catchType = classType `sepBy1` operator "|"
+
+finally :: JParser Finally
+finally = keyword "finally" *> block
+
+tryWithResources :: JParser TryStmt
+tryWithResources = keyword "try" *> (TryWithResources
+                <$> resourceSpecification
+                <*> block
+                <*> optionMaybe catches
+                <*> optionMaybe finally)
+
+resourceSpecification :: JParser ResourceSpecification
+resourceSpecification = lParen *> resourceList <* optionMaybe semiColon
+                            <* rParen
+
+resourceList :: JParser ResourceList
+resourceList = resource `sepBy1` semiColon
+
+resource :: JParser Resource
+resource =  Resource
+        <$> many variableModifier
+        <*> unannType
+        <*> variableDeclaratorID
+        <*> (operator "=" *> expression)
 
 -- | Java Expressions
 primary :: JParser Primary
@@ -634,6 +753,9 @@ primary = choice (map try [
 -- | TODO resolve this
 expression :: JParser Expression
 expression = undefined
+
+constantExpression :: JParser Expression
+constantExpression = expression
 
 -- | TODO resolve this
 lambdaExpression :: JParser Expression

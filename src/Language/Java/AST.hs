@@ -313,17 +313,17 @@ data LocalVariableDeclaration = LocalVariableDeclaration [VariableModifier]
 data Statement = StatementWTS StatementWTS
                | LabeledStmt Ident Statement
                | IfThenStmt Expression Statement
-               | IfThenElseStmt StatementNSI Statement
+               | IfThenElseStmt Expression StatementNSI Statement
                | WhileStmt Expression Statement
                | ForStmt ForStatement
                PRODUCTION
 
 data StatementNSI = StatementWTSNSI StatementWTS
                   | LabeledStmtNSI Ident StatementNSI
-                  | IfThenElseStmtNSI StatementNSI StatementNSI
+                  | IfThenElseStmtNSI Expression StatementNSI StatementNSI
                   | WhileStmtNSI Expression StatementNSI
                   | ForStmtNSI ForStatementNSI
-               PRODUCTION
+                  PRODUCTION
 
 data StatementWTS = BlockStmt Block
                   | EmptyStmt
@@ -332,9 +332,9 @@ data StatementWTS = BlockStmt Block
                   | AssertLblStmt Expression Expression
                   | SwitchStmt Expression SwitchBlock
                   | DoStmt Statement Expression
-                  | BreakStmt Ident
-                  | ContinueStmt Ident
-                  | ReturnStmt Ident
+                  | BreakStmt (Maybe Ident)
+                  | ContinueStmt (Maybe Ident)
+                  | ReturnStmt (Maybe Expression)
                   | SynchronizedStmt Expression Block
                   | ThrowStmt Expression
                   | TryStmt TryStmt
@@ -370,14 +370,16 @@ data SwitchLabel = CaseExpr ConstantExpression
 
 type EnumConstantName = Ident
 
-data ForStatement = BasicFor ForInit Expression ForUpdate Statement
+data ForStatement = BasicFor (Maybe ForInit)
+                        (Maybe Expression) (Maybe ForUpdate) Statement
                   | EnhancedFor [VariableModifier] UnannType VariableDeclID
-                    Expression
+                        Expression Statement
                   PRODUCTION
 
-data ForStatementNSI = BasicForNSI ForInit Expression ForUpdate StatementNSI
-                     | EnhancedForNSI [VariableModifier] UnannType VariableDeclID
-                       Expression
+data ForStatementNSI = BasicForNSI (Maybe ForInit)
+                        (Maybe Expression) (Maybe ForUpdate) StatementNSI
+                  | EnhancedForNSI [VariableModifier] UnannType VariableDeclID
+                        Expression StatementNSI
                      PRODUCTION
 
 data TryStmt = TryCatch Block Catches
