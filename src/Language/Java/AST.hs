@@ -234,7 +234,7 @@ data VariableModifier = FinalV
                       | VoidV
                       PRODUCTION
 
-data VariableInitializer = Expression Expression
+data VariableInitializer = ExpressionInitializer Expression
                          | ArrayInitializer ArrayInitializer
                          PRODUCTION
 
@@ -405,7 +405,7 @@ data Resource = Resource [VariableModifier] UnannType VariableDeclID Expression
 
 -- | 15. Expressions
 data Expression = LambdaExpression LambdaParameters LambdaBody
-                | AssignmentExpression AssignmentExpression
+                | Expression AssignmentExpression
                 PRODUCTION
 
 data AssignmentExpression = Term Term

@@ -527,7 +527,7 @@ interfaceMethodModifier = fromModifierTable interfaceMethodModifierTable
 
 variableInitializer :: JParser VariableInitializer
 variableInitializer = choice
-                    [ Expression <$> expression
+                    [ ExpressionInitializer <$> expression
                     , ArrayInitializer <$> arrayInitializer
                     ] <?> "variable initializer"
 
@@ -832,7 +832,7 @@ primary = choice [
      ] <?> "primary expression"
 
 expression :: JParser Expression
-expression = try (AssignmentExpression <$> assignmentExpression)
+expression = try (Expression <$> assignmentExpression)
           <|> lambdaExpression
 
 lambdaExpression :: JParser Expression
@@ -898,7 +898,6 @@ this :: JParser Primary
 this = pure This <* keyword "this"
 
 -- | Class instance creation expression
--- | TODO Fix recursion bug.
 classInstanceCreationExpression :: JParser Primary
 classInstanceCreationExpression = choice
     [ ClassInstanceCreationExpression <$> withIdentifier
@@ -1175,7 +1174,7 @@ table  = [ postfix <$> [ "++", "--" ]
          , binary  <$> [ "*", "/", "%" ]
          , binary  <$> [ "+", "-" ]
          , binary  <$> [ "<<", ">>", ">>>" ]
-         , (binary  <$> [ "<", ">", "<=", ">=" ]) ++ [instanceof]
+         , (binary <$> [ "<", ">", "<=", ">=" ]) ++ [instanceof]
          , binary  <$> [ "==", "!=" ]
          , binary  <$> [ "&" ]
          , binary  <$> [ "^"]
