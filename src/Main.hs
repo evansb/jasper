@@ -16,4 +16,10 @@ lexAndParse [fs] = do
         writeFile (fs ++ ".tok") (show tokens)
         let parsed = parseTokens tokens
         writeFile (fs ++ ".pt") (show parsed)
+
+lexAndParse ["lexonly", fs] = do
+        content <- readFile fs
+        let tokens = lexJava content
+        writeFile (fs ++ ".tok") (show tokens)
+
 lexAndParse _ = putStrLn "Usage : jasper <file.java>"
