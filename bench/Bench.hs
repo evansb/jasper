@@ -8,8 +8,8 @@ import Criterion.Main
 import Language.Java.Lexer
 import Language.Java.AST
 
-runLexer :: String -> IO String
-runLexer str = return (show (lexJava str))
+runLexer :: String -> IO ()
+runLexer str = writeFile "/dev/null" (show (lexJava str))
 
 headerStr :: String -> String -> String
 headerStr file content = "File : "
