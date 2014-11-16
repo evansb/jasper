@@ -120,8 +120,8 @@ data ImportDeclaration = SingleTypeImportDeclaration TypeName
                        | StaticImportOnDemandDeclaration TypeName
                        PRODUCTION
 
-data TypeDeclaration = ClassDeclaration
-                     | InterfaceDeclaration
+data TypeDeclaration = ClassDeclaration ClassDeclaration
+                     | InterfaceDeclaration InterfaceDeclaration
                      | EmptyStatement
                      PRODUCTION
 
@@ -146,6 +146,8 @@ data Modifier = Public    | Protected    | Private   | Abstract
               PRODUCTION
 
 type ClassModifier = Modifier
+
+type ClassBody = [ClassBodyDeclaration]
 
 data ClassBodyDeclaration = ClassMemberDeclaration ClassMemberDeclaration
                           | InstanceInitializer Block
@@ -327,7 +329,7 @@ data StatementNSI = StatementWTSNSI StatementWTS
 
 data StatementWTS = BlockStmt Block
                   | EmptyStmt
-                  | ExpressionStmt Expression
+                  | ExpressionStmt StatementExpression
                   | AssertStmt Expression
                   | AssertLblStmt Expression Expression
                   | SwitchStmt Expression SwitchBlock
@@ -346,7 +348,7 @@ data SwitchBlock = SwitchBlock [SwitchBlockStmtGrp] [SwitchLabel]
 data SwitchBlockStmtGrp = SwitchBlockStmtGrp SwitchLabels BlockStatements
                         PRODUCTION
 
-type StatementExpression = Expression
+type StatementExpression = AssignmentExpression
 
 data ForInit = ForInitExpr StatementExpressionList
              | ForInitDecl LocalVariableDeclaration
@@ -455,9 +457,6 @@ data ClassInstanceCreation =
 data TypeArgsOrDiam = TypeArgs TypeArgs
                     | Diamond
                     PRODUCTION
-
-data ClassBody = ClassBody
-               PRODUCTION
 
 -- | Field Access [fieldAccess]
 --  Style 1 <expression>.field

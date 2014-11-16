@@ -225,7 +225,7 @@ superInterfaces = Implements <$> (keyword "implements" *> interfaceTypeList)
 
 -- TODO Resolve this
 classBody :: JParser ClassBody
-classBody = undefined
+classBody = lBrace *> many classBodyDeclaration <* rBrace
 
 classBodyDeclaration :: JParser ClassBodyDeclaration
 classBodyDeclaration = choice (map try
@@ -359,7 +359,9 @@ exceptionType =   try (ClassTypeEx <$> classType)
              <|> (TypeVariableEx  <$> typeVariable)
 
 typeDeclaration :: JParser TypeDeclaration
-typeDeclaration = undefined
+typeDeclaration =  ClassDeclaration      <$> classDeclaration
+               <|> InterfaceDeclaration  <$> interfaceDeclaration
+               <?> "type declaration"
 
 methodBody :: JParser MethodBody
 methodBody =  (semiColon >> return EmptyBody)
@@ -531,13 +533,40 @@ localVariableDeclaration = LocalVariableDeclaration
              <?> "local variable declaration"
 
 statement :: JParser Statement
-statement = undefined
+statement = choice
+          [ StatementWTS <$> statementWTS
+          , labeledStmt
+          , ifThenStmt
+          , ifThenElseStmt
+          , whileStmt
+          , ForStmt <$> forStmt
+          ] <?> "statement"
 
 statementNSI :: JParser StatementNSI
-statementNSI = undefined
+statementNSI = choice
+             [ StatementWTSNSI <$> statementWTS
+             , labeledStmtNSI
+             , ifThenElseStmtNSI
+             , whileStmtNSI
+             , ForStmtNSI <$> forStmtNSI
+             ] <?> "statement no short if"
 
 statementWTS :: JParser StatementWTS
-statementWTS = undefined
+statementWTS = choice
+             [ BlockStmt <$> block
+             , emptyStatement
+             , expressionStmt
+             , assertStmt
+             , assertLblStmt
+             , switchStmt
+             , doStmt
+             , breakStmt
+             , continueStmt
+             , returnStmt
+             , synchronizedStmt
+             , throwStmt
+             , TryStmt <$> tryStmt
+             ] <?> "statement without trailing substatement"
 
 emptyStatement :: JParser StatementWTS
 emptyStatement = semiColon >> pure EmptyStmt
@@ -551,8 +580,24 @@ labeledStmtNSI = LabeledStmtNSI <$> ident <*> (operator ":" *> statementNSI)
 expressionStmt :: JParser StatementWTS
 expressionStmt = ExpressionStmt <$> statementExpression <* semiColon
 
+isStatementExpression :: AssignmentExpression -> Bool
+isStatementExpression expr = case expr of
+        Assignment {} -> True
+        Term (PrefixExpr  (Operator "++") _) -> True
+        Term (PrefixExpr  (Operator "--") _) -> True
+        Term (PostfixExpr (Operator "++") _) -> True
+        Term (PostfixExpr (Operator "--") _) -> True
+        Term (PrimExpr (MethodInvocation _)) -> True
+        Term (PrimExpr (ClassInstanceCreationExpression _)) -> True
+        _ -> False
+
 statementExpression :: JParser StatementExpression
-statementExpression = undefined
+statementExpression = do
+        aExpr <- assignmentExpression
+        if isStatementExpression aExpr then
+            return aExpr
+        else
+            unexpected "statement expression"
 
 ifThenStmt :: JParser Statement
 ifThenStmt =  keyword "if" *> (IfThenStmt
@@ -620,6 +665,14 @@ doStmt = keyword "do" *> (DoStmt
          <$> statement
          <*> (keyword "while" *> lParen *>
                 expression <* rParen <* semiColon))
+
+forStmt :: JParser ForStatement
+forStmt = basicForStmt <|> enhancedForStmt
+       <?> "for statement"
+
+forStmtNSI :: JParser ForStatementNSI
+forStmtNSI =  basicForStmtNSI <|> enhancedForStmtNSI
+          <?> "for statement no short if"
 
 basicForStmt :: JParser ForStatement
 basicForStmt =  keyword "for" *> (BasicFor
