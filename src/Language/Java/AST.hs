@@ -327,7 +327,7 @@ data StatementNSI = StatementWTSNSI StatementWTS
 
 data StatementWTS = BlockStmt Block
                   | EmptyStmt
-                  | ExpressionStmt StatementExpression
+                  | ExpressionStmt Expression
                   | AssertStmt Expression
                   | AssertLblStmt Expression Expression
                   | SwitchStmt Expression SwitchBlock
@@ -340,20 +340,13 @@ data StatementWTS = BlockStmt Block
                   | TryStmt TryStmt
                   PRODUCTION
 
-data StatementExpression = AssignmentStmt Assignment
-                         | PreIncrementStmt
-                         | PreDecrementStmt
-                         | PostIncrementStmt
-                         | PostDecrementStmt
-                         | MethodInvocationStmt MethodInvocation
-                         | ClassInstanceCreationStmt ClassInstanceCreation
-                         PRODUCTION
-
 data SwitchBlock = SwitchBlock [SwitchBlockStmtGrp] [SwitchLabel]
                  PRODUCTION
 
 data SwitchBlockStmtGrp = SwitchBlockStmtGrp SwitchLabels BlockStatements
                         PRODUCTION
+
+type StatementExpression = Expression
 
 data ForInit = ForInitExpr StatementExpressionList
              | ForInitDecl LocalVariableDeclaration
@@ -406,8 +399,12 @@ data Resource = Resource [VariableModifier] UnannType VariableDeclID Expression
 
 -- | 15. Expressions
 data Expression = LambdaExpression LambdaParameters LambdaBody
-                | AssignmentExpression
+                | AssignmentExpression AssignmentExpression
                 PRODUCTION
+
+data AssignmentExpression = Term Term
+                          | Assignment LHS T Expression
+                          PRODUCTION
 
 -- | Literals [literal]
 data Literal = IntegerLiteral Integer
@@ -527,9 +524,6 @@ data LHS = LHSExpr  Primary
          | LHSIdent Ident
          PRODUCTION
 
-data Assignment = Assignment LHS T Expression
-                PRODUCTION
-
 data PostfixExpr = PrimPostfixExpr Primary
                  | NamePostfixExpr TypeName
                  | PostIncrementExpr PostfixExpr
@@ -557,9 +551,11 @@ data CastExpression = UnaryToPrim PrimType UnaryExpression
 data CondExpr = CondExpr Expression Expression Expression
               PRODUCTION
 
-data OpExpr = PrimExpr Primary
-            | NameExpr TypeName
-            | PrefixExpr T OpExpr
-            | PostfixExpr T OpExpr
-            | BinaryExpr T OpExpr OpExpr
-            PRODUCTION
+data Term = PrimExpr Primary
+          | NameExpr TypeName
+          | PrefixExpr T Term
+          | PostfixExpr T Term
+          | InstanceOfExpr RefType Term
+          | BinaryExpr T Term Term
+          | ConditionalExpr Expression Term Term
+          PRODUCTION

@@ -752,7 +752,7 @@ primary = choice (map try [
 
 -- | TODO resolve this
 expression :: JParser Expression
-expression = undefined
+expression = AssignmentExpression <$> assignmentExpression
 
 constantExpression :: JParser Expression
 constantExpression = expression
@@ -909,8 +909,14 @@ parentMethodInvocation = ParentMethodInvocation
 -- TODO Resolve this
 methodReference :: JParser Primary
 methodReference = MethodReference <$> choice (map try
-        [
-        ])
+        [ nameMethodReference
+        , refTypeMethodReference
+        , exprMethodReference
+        , selfParentMethodReference
+        , parentMethodReference
+        , classTypeMethodReference
+        , arrayTypeMethodReference
+        ]) <?> "method reference"
 
 nameMethodReference :: JParser MethodReference
 nameMethodReference = NameMR
@@ -998,7 +1004,10 @@ leftHandSide = try (LHSExpr <$> choice [ fieldAccess, arrayAccess ])
         <|> (LHSIdent <$> ident)
         <?> "lhs"
 
-assignment :: JParser Assignment
+assignmentExpression :: JParser AssignmentExpression
+assignmentExpression = try (Term <$> term) <|> assignment
+
+assignment :: JParser AssignmentExpression
 assignment = Assignment
        <$> leftHandSide
        <*> assignmentOperator
@@ -1042,29 +1051,35 @@ castExpr = choice
                     <*> lambdaExpression
        ] <?> "cast expression"
 
-opExpression :: JParser OpExpr
-opExpression = buildExpressionParser table opExpr
+term :: JParser Term
+term = buildExpressionParser table opExpr <?> "term"
 
-opExpr :: JParser OpExpr
+opExpr :: JParser Term
 opExpr = choice [ PrimExpr <$> primary, NameExpr <$> typeName ]
 
+-- | Operator precedence table
 table  = [ postfix <$> [ "++", "--" ]
          , prefix  <$> [ "++", "--", "+", "-", "~", "!" ]
          , binary  <$> [ "*", "/", "%" ]
          , binary  <$> [ "+", "-" ]
          , binary  <$> [ "<<", ">>", ">>>" ]
-         , binary  <$> [ "<", ">", "<=", ">=", "instanceof" ]
+         , (binary  <$> [ "<", ">", "<=", ">=" ]) ++ [instanceof]
          , binary  <$> [ "==", "!=" ]
          , binary  <$> [ "&" ]
          , binary  <$> [ "^"]
          , binary  <$> [ "|" ]
          , binary  <$> [ "&&" ]
          , binary  <$> [ "||" ]
+         , [conditionalExpr]
          ]
 
+instanceof = Postfix (InstanceOfExpr <$> (keyword "instanceof" *> refType))
 binary op = Infix (BinaryExpr <$> operator op) AssocLeft
 postfix op = Postfix (PostfixExpr <$> operator op)
 prefix op = Prefix (PrefixExpr <$> operator op)
+conditionalExpr = Infix (ConditionalExpr <$>
+                            (operator "?" *> expression <* operator ":"))
+                        AssocRight
 
 variableInitializer :: JParser VariableInitializer
 variableInitializer = choice
