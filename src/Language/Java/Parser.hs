@@ -2,12 +2,11 @@
 module Language.Java.Parser where
 
 import Text.Parsec
-import qualified Language.Java.Parser.Core as C
 import Language.Java.Lexer
+import Language.Java.Parser.Internal
 
-type JParser a = C.JParser a
-
-parseJava :: JParser a -> String -> a
+parseProgram = parseJava javaProgram
+parseTokens = parse javaProgram ""
 parseJava p s =
         let s' = runTokenizer s
         in case parse p "" s' of

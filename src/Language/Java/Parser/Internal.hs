@@ -29,6 +29,9 @@ import Text.Parsec.Expr
 import Language.Java.AST
 import Language.Java.Parser.Core
 
+javaProgram :: JParser [CompilationUnit]
+javaProgram = compilationUnit  `manyTill` eof
+
 -- |
 -- = Productions from 3 __(Lexical Structures)__.
 
@@ -100,7 +103,7 @@ simpleClassType = ClassType <$> ident <*> optionMaybe typeArgs
 
 aggrClassType :: JParser ClassType
 aggrClassType = AggrClassType
-             <$> (many classType <* dot)
+             <$> (classType `manyTill` dot)
              <*> ident
              <*> optionMaybe typeArgs
 
