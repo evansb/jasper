@@ -3,7 +3,7 @@ Module      : Language.Java.AST
 Description : ADT to represent a Java 8 program and grammar.
 Copyright   : (c) Evan Sebastian 2014
 License     : MIT
-Maintainer  : evanlhoini@gmail.com
+Maintainer  : evan.sebastian@u.nus.edu
 Stability   : experimental
 Portability : GHC 7.8.2
 

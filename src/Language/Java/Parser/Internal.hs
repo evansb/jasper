@@ -3,13 +3,14 @@ Module      : Language.Java.Parser.Internal
 Description : Internal implementation of the parser for all productions.
 Copyright   : (c) Evan Sebastian 2014
 License     : MIT
-Maintainer  : evanlhoini@gmail.com
+Maintainer  : evan.sebastian@u.nus.edu
 Stability   : experimental
 Portability : GHC 7.8.2
 
 This module implements parsers from String to symbols in the
 'Language.Java.AST' Java 8 parser.
 Consider using 'Language.Java.Parser' instead of this module.
+
 -}
 
 {-# LANGUAGE DoAndIfThenElse #-}
@@ -470,12 +471,14 @@ enumConstant = EnumConstant
             <*> optionMaybe classBody
 
 enumConstantModifier :: JParser EnumConstantModifier
-enumConstantModifier = undefined
+enumConstantModifier = return EnumConstantModifier
 
 enumBodyDeclaration :: JParser EnumBodyDeclarations
 enumBodyDeclaration = many classBodyDeclaration
 
--- | Productions from 9 (Interfaces)
+-- |
+-- = Productions from 9 (Interfaces)
+
 interfaceDeclaration :: JParser InterfaceDeclaration
 interfaceDeclaration = normalInterfaceDeclaration
                     <?> "interface declaration"
@@ -521,13 +524,20 @@ interfaceMethodDeclaration =  InterfaceMethodDeclaration
                           <*> methodHeader
                           <*> methodBody
 
-
 interfaceMethodModifier :: JParser InterfaceMethodModifier
 interfaceMethodModifier = fromModifierTable interfaceMethodModifierTable
 
--- | Productions from 14 (Blocks and Statements)
+variableInitializer :: JParser VariableInitializer
+variableInitializer = choice
+                    [ Expression <$> expression
+                    , ArrayInitializer <$> arrayInitializer
+                    ] <?> "variable initializer"
 
--- | Statement
+arrayInitializer :: JParser ArrayInitializer
+arrayInitializer = lBrace *> (variableInitializer `sepBy` comma) <* rBrace
+
+-- |
+-- = Productions from 14 (Blocks and Statements)
 block :: JParser Block
 block = do
         bs <- lBrace *> optionMaybe blockStatements <* rBrace
@@ -1152,15 +1162,6 @@ prefix op = Prefix (PrefixExpr <$> operator op)
 conditionalExpr = Infix (ConditionalExpr <$>
                             (operator "?" *> expression <* operator ":"))
                         AssocRight
-
-variableInitializer :: JParser VariableInitializer
-variableInitializer = choice
-                    [ Expression <$> expression
-                    , ArrayInitializer <$> arrayInitializer
-                    ] <?> "variable initializer"
-
-arrayInitializer :: JParser ArrayInitializer
-arrayInitializer = lBrace *> (variableInitializer `sepBy` comma) <* rBrace
 
 primitiveTypes = S.fromList
       [ "byte" , "short" , "int" , "long" , "char",

@@ -1,3 +1,17 @@
+{-|
+Module      : Language.Java.Lexer.Internal
+Description : Internal implementation of the lexical analysis.
+Copyright   : (c) Evan Sebastian 2014
+License     : MIT
+Maintainer  : evan.sebastian@u.nus.edu
+Stability   : experimental
+Portability : GHC 7.8.2
+
+This module implements lexer from String to a list of Token.
+Consider using 'Language.Java.Lexer' instead of this module.
+
+-}
+
 {-# LANGUAGE DoAndIfThenElse #-}
 module Language.Java.Lexer.Internal where
 

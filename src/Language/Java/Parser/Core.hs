@@ -1,3 +1,18 @@
+{-|
+Module      : Language.Java.Parser.Core
+Description : Bridges between lexer and parser and stores miscellaneous data.
+Copyright   : (c) Evan Sebastian 2014
+License     : MIT
+Maintainer  : evan.sebastian@u.nus.edu
+Stability   : experimental
+Portability : GHC 7.8.2
+
+This module is a prerequisite for 'Language.Java.Parser.Internal'
+and is used to bridge between lexical analysis and the parser
+(e.g define the token iterator)
+
+-}
+
 {-# LANGUAGE DoAndIfThenElse #-}
 module Language.Java.Parser.Core where
 
