@@ -1,4 +1,19 @@
+{-|
+Module      : Language.Java.Parser.Internal
+Description : Internal implementation of the parser for all productions.
+Copyright   : (c) Evan Sebastian 2014
+License     : MIT
+Maintainer  : evanlhoini@gmail.com
+Stability   : experimental
+Portability : GHC 7.8.2
+
+This module implements parsers from String to symbols in the
+'Language.Java.AST' Java 8 parser.
+Consider using 'Language.Java.Parser' instead of this module.
+-}
+
 {-# LANGUAGE DoAndIfThenElse #-}
+
 module Language.Java.Parser.Internal where
 
 import Control.Applicative ((<$>), (*>), (<*), (<*>), pure)
@@ -13,28 +28,41 @@ import Text.Parsec.Expr
 import Language.Java.AST
 import Language.Java.Parser.Core
 
--- | Java Identifier
+-- |
+-- = Productions from 3 __(Lexical Structures)__.
+
 ident :: JParser Ident
 ident = Ident <$> (getSS <$> satisfy isIdentifier)
+
+literal :: JParser Primary
+literal = Literal <$> do
+       tok <- getT
+       case tok of
+        TokInt t    -> return $ IntegerLiteral t
+        TokFloat s  -> return $ FloatingPointLiteral s
+        TokDouble s -> return $ FloatingPointLiteral s
+        TokLong t   -> return $ IntegerLiteral t
+        TokChar s   -> return $ CharacterLiteral s
+        TokString s -> return $ StringLiteral s
+        TokNull     -> return NullLiteral
+        s           -> unexpected (show s)
+       <?> "literal"
 
 -- | Java Name
 typeName :: JParser TypeName
 typeName = TypeName <$> ident `sepBy1` dot
 
--- | Java Name Dot, for parsing Name dot class
+-- | Java name ended by dot, for parsing such as "this.class"
 typeNameDot :: JParser TypeName
 typeNameDot = TypeName <$> ident `sepEndBy1` dot
 
---------------------------------------
--- | Productions from §4 (Types, Values, and Variables)
---------------------------------------
+-- |
+-- = Productions from §4 __(Types, Values, and Variables)__.
 
--- | Java types are either primitive or reference types.
 type_ :: JParser Type
-type_ = try (PrimType <$> primType)
-     <|> (RefType <$> refType)
+type_ = try (PrimType <$> primType) <|> (RefType <$> refType)
 
--- | Primitive types.
+-- | Integral and floating point types are merged into one production.
 primType :: JParser PrimType
 primType = (do
     let isPrimType x = isKeyword x && S.member (getSS x) primitiveTypes
@@ -50,17 +78,21 @@ primType = (do
       _         -> BooleanT)
     <?> "primitive type"
 
--- | Reference types.
 refType :: JParser RefType
-refType = (try classOrInterfaceT <|> (ArrayType <$> arrayType))
-       <?> "reference type"
+refType = choice (map try
+        [ classOrInterfaceType
+        , TypeVariable <$> typeVariable
+        , ArrayType    <$> arrayType
+        ]) <?> "reference type"
 
-classOrInterfaceT :: JParser RefType
-classOrInterfaceT = ClassOrInterfaceType <$> classType
+classOrInterfaceType :: JParser RefType
+classOrInterfaceType = ClassOrInterfaceType <$> classType
 
 classType :: JParser ClassType
-classType = ClassType <$> ident <*> optionMaybe typeArgs
-         <?> "class type"
+classType = try simpleClassType <|> aggrClassType
+
+interfaceType :: JParser InterfaceType
+interfaceType = classType
 
 simpleClassType :: JParser ClassType
 simpleClassType = ClassType <$> ident <*> optionMaybe typeArgs
@@ -71,13 +103,13 @@ aggrClassType = AggrClassType
              <*> ident
              <*> optionMaybe typeArgs
 
-arrayDims :: JParser Dims
-arrayDims = length <$> many (lSquare <* rSquare)
+dims :: JParser Dims
+dims = length <$> many (lSquare <* rSquare)
 
 arrayType :: JParser ArrayType
 arrayType = choice (map try
           [ primArrayType
-          , refArrayType
+          , classOrInterfaceArrayType
           , typeVarArrayType
           ]) <?> "array types"
 
@@ -85,16 +117,13 @@ typeVariable :: JParser TypeVariable
 typeVariable = ident
 
 primArrayType :: JParser ArrayType
-primArrayType = PrimArrayT <$> primType <*> arrayDims
+primArrayType = PrimArrayT <$> primType <*> dims
 
-refArrayType :: JParser ArrayType
-refArrayType = RefArrayT <$> classOrInterfaceT <*> arrayDims
+classOrInterfaceArrayType :: JParser ArrayType
+classOrInterfaceArrayType = ClassOrInterfaceArrayT <$> classType <*> dims
 
 typeVarArrayType :: JParser ArrayType
-typeVarArrayType = TypeVarArrayT <$> typeVariable <*> arrayDims
-
-typeParams :: JParser [TypeParam]
-typeParams = between lessThan greaterThan (typeParam `sepBy1` comma)
+typeVarArrayType = TypeVarArrayT <$> typeVariable <*> dims
 
 typeParam :: JParser TypeParam
 typeParam = TypeParam <$> ident <*> optionMaybe typeBound
@@ -102,36 +131,34 @@ typeParam = TypeParam <$> ident <*> optionMaybe typeBound
 typeBound :: JParser TypeBound
 typeBound = keyword "extends" *> choice (map try
           [ ExtendsTypeVar   <$> typeVariable
-          , ExtendsClassType <$> classType <*> additionalBound
+          , ExtendsClassType <$> classType <*> many additionalBound
           ])
 
-additionalBound :: JParser [ClassType]
-additionalBound = many (operator "&" *> classType)
+additionalBound :: JParser AdditionalBound
+additionalBound = operator "&" *> interfaceType
 
-typeArgs :: JParser [TypeArg]
-typeArgs = between lessThan greaterThan (typeArg `sepBy1` comma)
+typeArgs :: JParser TypeArgs
+typeArgs = between lessThan greaterThan typeArgList
         <?> "type arguments"
+
+typeArgList :: JParser TypeArgList
+typeArgList = typeArg `sepBy1` comma
 
 typeArg :: JParser TypeArg
 typeArg = do
     let wc x = isOperator x && (x === "?")
     tok <- try (getSS <$> satisfy wc) <|> pure ""
-    if null tok then
-        ActualType <$> refType
-    else
-        Wildcard <$> optionMaybe wildcardBound
+    if null tok then ActualType <$> refType
+                else Wildcard   <$> optionMaybe wildcardBound
     ; <?> "type argument"
 
--- | Wildcard bounds
+typeParams :: JParser [TypeParam]
+typeParams = between lessThan greaterThan (typeParam `sepBy1` comma)
+
 wildcardBound :: JParser WildcardBound
 wildcardBound = SuperWB <$> (keyword "super" *> refType)
              <|> ExtendsWB <$> (keyword "extends" *> refType)
              <?> "wild card bound"
-
--- | Miscellaneous functions
-primitiveTypes = S.fromList
-      [ "byte" , "short" , "int" , "long" , "char",
-        "float" , "double" , "boolean"]
 
 --------------------------------------
 -- | Productions from §7 (Packages)
@@ -166,8 +193,7 @@ importDeclaration = choice (map try [
         , typeImportOnDemandDeclaration
         , singleStaticImportDeclaration
         , staticImportOnDemandDeclaration
-        ])
-        <?> "import declaration"
+        ]) <?> "import declaration"
 
 singleTypeImportDeclaration :: JParser ImportDeclaration
 singleTypeImportDeclaration = SingleTypeImportDeclaration
@@ -263,18 +289,15 @@ variableDeclarator = VariableDeclarator
                   <*> optionMaybe (operator "=" *> variableInitializer)
 
 variableDeclaratorID :: JParser VariableDeclID
-variableDeclaratorID = (,) <$> ident <*> (fromMaybe 0 <$> optionMaybe arrayDims)
+variableDeclaratorID = (,) <$> ident <*> (fromMaybe 0 <$> optionMaybe dims)
 
 -- Unannoted type thing
-
+-- TODO Finish this section once Annotation is finished.
 unannType :: JParser UnannType
 unannType = type_
 
---
-
 result :: JParser Result
-result = try (RType <$> unannType)
-      <|> (pure RVoid <* keyword "void")
+result = try (RType <$> unannType) <|> (pure RVoid <* keyword "void")
 
 methodDeclaration :: JParser ClassMemberDeclaration
 methodDeclaration = MethodDeclaration
@@ -287,12 +310,11 @@ methodDeclarator :: JParser MethodDeclarator
 methodDeclarator = MethodDeclarator
                 <$> ident
                 <*> (lParen *> optionMaybe formalParameterList <* rParen)
-                <*> (fromMaybe 0 <$> optionMaybe arrayDims)
+                <*> (fromMaybe 0 <$> optionMaybe dims)
                 <?> "method declarator"
 
 methodHeader :: JParser MethodHeader
-methodHeader = try methodHeaderWithoutTP
-            <|> methodHeaderTP
+methodHeader = try methodHeaderWithoutTP <|> methodHeaderTP
 
 methodHeaderWithoutTP :: JParser MethodHeader
 methodHeaderWithoutTP = MethodHeader
@@ -364,8 +386,7 @@ typeDeclaration =  ClassDeclaration      <$> classDeclaration
                <?> "type declaration"
 
 methodBody :: JParser MethodBody
-methodBody =  (semiColon >> return EmptyBody)
-          <|> (MethodBody <$> block)
+methodBody =  (semiColon >> return EmptyBody) <|> (MethodBody <$> block)
 
 instanceInitializer :: JParser InstanceInitializer
 instanceInitializer = block
@@ -793,45 +814,47 @@ primary = choice (map try [
      ,  typeNameDotClass
      ,  typeNameArrDotClass
      ,  voidDotClass
-{- TODO Uncomment expression prods once ready
      ,  classInstanceCreationExpression
      ,  expressionParen
      ,  fieldAccess
      ,  arrayAccess
      ,  methodInvocation
      ,  methodReference
---}
+     ,  ArrayCreation <$> arrayCreationExpr
      ]) <?> "expression"
 
 -- | TODO resolve this
 expression :: JParser Expression
-expression = AssignmentExpression <$> assignmentExpression
+expression = try (AssignmentExpression <$> assignmentExpression)
+          <|> lambdaExpression
+
+lambdaExpression :: JParser Expression
+lambdaExpression = LambdaExpression
+                <$> lambdaParameters
+                <*> (operator "-" *> operator ">" *> lambdaBody)
+                <?> "lambda expression"
+
+lambdaParameters :: JParser LambdaParameters
+lambdaParameters = choice
+                 [ LIdent <$> ident
+                 , lParen *> (LFormalParameterList <$> optionMaybe
+                                formalParameterList) <* rParen
+                 , lParen *> (LInferredFormalParameterList <$>
+                                inferredFormalParameterList) <* rParen
+                 ] <?> "lambda parameters"
+
+inferredFormalParameterList :: JParser InferredFormalParameterList
+inferredFormalParameterList = ident `sepBy1` comma
 
 constantExpression :: JParser Expression
 constantExpression = expression
 
--- | TODO resolve this
-lambdaExpression :: JParser Expression
-lambdaExpression = undefined
+lambdaBody :: JParser LambdaBody
+lambdaBody = try (Lambda <$> expression) <|> (LambdaBlock <$> block)
 
 -- | Expression surrounded by parenthesis
-expressionParen :: JParser Expression
-expressionParen = between lParen rParen expression
-
--- | Literals
-literal :: JParser Primary
-literal = Literal <$> do
-       tok <- getT
-       case tok of
-        TokInt t    -> return $ IntegerLiteral t
-        TokFloat s  -> return $ FloatingPointLiteral s
-        TokDouble s -> return $ FloatingPointLiteral s
-        TokLong t   -> return $ IntegerLiteral t
-        TokChar s   -> return $ CharacterLiteral s
-        TokString s -> return $ StringLiteral s
-        TokNull     -> return NullLiteral
-        s           -> unexpected (show s)
-       <?> "literal"
+expressionParen :: JParser Primary
+expressionParen = between lParen rParen (Expr <$> expression)
 
 -- | Java name followed by a .class
 -- | e.g foo.bar.qux.class
@@ -845,7 +868,7 @@ typeNameDotClass = TypeNameDotClass
 typeNameArrDotClass :: JParser Primary
 typeNameArrDotClass = TypeNameArrDotClass
         <$> typeName
-        <*> arrayDims
+        <*> dims
         <*  dot <* keyword "class"
         <?> "typename[].class"
 
@@ -1018,20 +1041,19 @@ arrayCreationExpr = choice
          ,  classTypeACE
          ,  primTypeACEI
          ,  classTypeACEI
-         ]
-        <?> "array creation expression"
+         ] <?> "array creation expression"
 
 primTypeACE :: JParser ArrayCreationExpr
 primTypeACE = PrimTypeACE
         <$> (keyword "new" *> primType)
         <*> dimExprs
-        <*> arrayDims
+        <*> dims
 
 classTypeACE :: JParser ArrayCreationExpr
 classTypeACE = ClassTypeACE
         <$> (keyword "new" *> classType)
         <*> dimExprs
-        <*> arrayDims
+        <*> dims
 
 primTypeACEI :: JParser ArrayCreationExpr
 primTypeACEI = PrimTypeACEI
@@ -1066,9 +1088,6 @@ assignment = Assignment
        <*> assignmentOperator
        <*> expression
        <?> "assignment"
-
-dims :: JParser ()
-dims = lSquare >> rSquare >> return ()
 
 postfixExpr :: JParser PostfixExpr
 postfixExpr = choice
@@ -1142,3 +1161,8 @@ variableInitializer = choice
 
 arrayInitializer :: JParser ArrayInitializer
 arrayInitializer = lBrace *> (variableInitializer `sepBy` comma) <* rBrace
+
+primitiveTypes = S.fromList
+      [ "byte" , "short" , "int" , "long" , "char",
+        "float" , "double" , "boolean"]
+

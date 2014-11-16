@@ -18,8 +18,9 @@ nextPos pos _ [] = pos
 
 -- | Same as Parsec's satisfy, this is for Java token
 satisfy :: (T -> Bool) -> JParser T
-satisfy f = tokenPrim show nextPos
-                (\c -> if f (fst c) then Just (fst c) else Nothing)
+satisfy f = tokenPrim show nextPos (\c -> if f (fst c)
+                                          then Just (fst c)
+                                          else Nothing)
 
 -- | Fetch next token and advance
 getT :: JParser T
@@ -33,6 +34,8 @@ getSS (Keyword    s) = s
 getSS (Operator   s) = s
 getSS _              = error "Non string storing token"
 
+-- | Check the equality between the content of a string storing token
+--   and a string.
 (===) :: T -> String -> Bool
 t === s = getSS t == s
 
@@ -78,9 +81,9 @@ isRBrace _ = False
 operator s      = satisfy (\x -> isOperator x && x === s)
 keyword kwd     = satisfy (\x -> isKeyword x  && x === kwd)
 
-lessThan        = operator "<"      >> return OpLT
-greaterThan     = operator ">"      >> return OpGT
-star            = operator "*"      >> return OpMult
+lessThan        = operator "<"
+greaterThan     = operator ">"
+star            = operator "*"
 multOp          = star
 
 comma           = satisfy isComma

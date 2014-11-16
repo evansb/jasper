@@ -1,4 +1,19 @@
+{-|
+Module      : Language.Java.AST
+Description : ADT to represent a Java 8 program and grammar.
+Copyright   : (c) Evan Sebastian 2014
+License     : MIT
+Maintainer  : evanlhoini@gmail.com
+Stability   : experimental
+Portability : GHC 7.8.2
+
+This module defines various productions in the chapter 19 of the
+Java 8 Language Specification.
+
+-}
+
 {-# LANGUAGE CPP #-}
+
 module Language.Java.AST where
 
 import Text.Parsec
@@ -6,15 +21,11 @@ import Text.Parsec
 #define PRODUCTION deriving(Eq, Show)
 
 type Token = (T, SourcePos)
+
+-- | Produced from 'Language.Java.Lexer'.
 data T  = Keyword    String
         | Operator   String
-        -- Operators
-        | OpIncr    | OpDecr    | OpPlus  | OpMinus  | OpTilde
-        | OpExcl    | OpMult    | OpDiv   | OpMod    | OpRShift
-        | OpURShift | OpLShift  | OpLT    | OpGT     | OpGTEq
-        | OpLTEq    | OpIOf     | OpEqEq  | OpNotEq  | OpBitAnd
-        | OpOr      | OpBitOr   | OpBitXor
-        -- Literal tokens
+        -- | Tokens
         | TokInt     Integer
         | TokLong    Integer
         | TokDouble  String
@@ -24,7 +35,7 @@ data T  = Keyword    String
         | TokBool    Bool
         | TokNull
         | TokIdent   String
-
+        -- | Separators.
         | LParen     | RParen
         | LBrace     | RBrace
         | LSquare    | RSquare
@@ -33,23 +44,16 @@ data T  = Keyword    String
         | At         | DColon
         PRODUCTION
 
--- | Names and Identifiers
-
--- | Java Identifier [ident]
 data Ident = Ident String
            PRODUCTION
 
--- | Identifiers separated by period [name]
---   e.g foo.bar.baz
 data TypeName = TypeName [Ident]
           PRODUCTION
 
--- | Primitive types or Reference Types. [type_]
 data Type = PrimType PrimType
           | RefType RefType
           PRODUCTION
 
--- | Primitive types. [primType]
 data PrimType
     = BooleanT
     | ByteT
@@ -61,46 +65,50 @@ data PrimType
     | DoubleT
     PRODUCTION
 
--- | Classes type are either simple class type or aggregate.
---   ClassType       Container<T>
---   AggrClassType   java.util.Container<T>
+data RefType = ClassOrInterfaceType ClassOrInterfaceType
+             | TypeVariable TypeVariable
+             | ArrayType ArrayType
+             PRODUCTION
+
+type ClassOrInterfaceType = ClassType
+
 data ClassType = ClassType Ident (Maybe TypeArgs)
                | AggrClassType [ClassType] Ident (Maybe TypeArgs)
                PRODUCTION
 
--- | Reference types [refType]
--- There is no significant difference between class and interface type.
-data RefType = ClassOrInterfaceType ClassType
-             | ArrayType ArrayType
-             PRODUCTION
+type InterfaceType = ClassType
 
 type TypeVariable = Ident
 
-data TypeArg = ActualType RefType
-             | Wildcard (Maybe WildcardBound)
-             PRODUCTION
-
-type TypeArgs = [TypeArg]
-
-data WildcardBound = SuperWB RefType
-                   | ExtendsWB RefType
-                   PRODUCTION
-
 data ArrayType = PrimArrayT PrimType Dims
-               | RefArrayT RefType Dims
+               | ClassOrInterfaceArrayT ClassOrInterfaceType Dims
                | TypeVarArrayT TypeVariable Dims
                PRODUCTION
 
 type Dims = Int
 
+type TypeArgs = TypeArgList
+
+type TypeArgList = [TypeArg]
+
+data TypeArg = ActualType RefType
+             | Wildcard (Maybe WildcardBound)
+             PRODUCTION
+
 data TypeParam = TypeParam Ident (Maybe TypeBound)
                PRODUCTION
 
-type TypeParams = [TypeParam]
-
 data TypeBound = ExtendsTypeVar TypeVariable
-               | ExtendsClassType ClassType [ClassType]
+               | ExtendsClassType ClassOrInterfaceType [AdditionalBound]
                PRODUCTION
+
+type AdditionalBound = InterfaceType
+
+data WildcardBound = SuperWB RefType
+                   | ExtendsWB RefType
+                   PRODUCTION
+
+type TypeParams = [TypeParam]
 
 -- | 7. Packages
 
@@ -429,6 +437,8 @@ data Primary = Literal Literal
                 | This
                 -- | foo.this
                 | TypeNameDotThis TypeName
+                -- | (Expression)
+                | Expr Expression
                 -- | Instant class creation
                 | ClassInstanceCreationExpression ClassInstanceCreation
                 -- | Field access
@@ -439,6 +449,8 @@ data Primary = Literal Literal
                 | MethodInvocation MethodInvocation
                 -- | Method reference
                 | MethodReference MethodReference
+                -- | Array creation expression
+                | ArrayCreation ArrayCreationExpr
                 PRODUCTION
 
 -- | Class instance creation [classInstanceCreation]
@@ -511,12 +523,14 @@ type ArrayInitializer = [VariableInitializer]
 type ConstantExpression = Expression
 
 data LambdaParameters = LIdent Ident
-                      | LFormalParameterList FormalParameterList
-                      | LInferredFormalParameterList [Ident]
+                      | LFormalParameterList (Maybe FormalParameterList)
+                      | LInferredFormalParameterList InferredFormalParameterList
                       PRODUCTION
 
-data LambdaBody = LambdaBodyExpression Expression
-                | LambdaBodyBlock      Block
+type InferredFormalParameterList = [Ident]
+
+data LambdaBody = Lambda Expression
+                | LambdaBlock Block
                 PRODUCTION
 
 data LHS = LHSExpr  Primary
