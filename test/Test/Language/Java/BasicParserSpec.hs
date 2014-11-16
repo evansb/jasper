@@ -18,7 +18,7 @@ spec = describe "Basic Parser" $ do
             ident `shouldFailOnJ` javaReservedNames
         it "Should be able to parse names" $ do
             typeName `shouldParseJ`
-                [ "foo.bar.baz" `to` TypeName (map Ident ["foo", "bar", "baz"])
-                , "foo" `to` TypeName [Ident "foo"]
+                [ "foo.bar.baz" `to` map Ident ["foo", "bar", "baz"]
+                , "foo" `to` [Ident "foo"]
                 ]
             typeName `shouldFailOnJ` [".Boo","Boo."]

@@ -47,7 +47,7 @@ getSS :: T -> String
 getSS (TokIdent   s) = s
 getSS (Keyword    s) = s
 getSS (Operator   s) = s
-getSS _              = error "Non string storing token"
+getSS s              = show s
 
 -- | Check the equality between the content of a string storing token
 --   and a string.
@@ -114,7 +114,7 @@ dColon          = satisfy isDColon
 
 fromModifierTable :: S.HashSet String -> JParser Modifier
 fromModifierTable whiteList = do
-        tok <- getSS <$> getT
+        tok <- getSS <$> satisfy isKeyword
         if tok `S.member` whiteList then
             case M.lookup tok modifierTable of
                 Just modifier -> return modifier

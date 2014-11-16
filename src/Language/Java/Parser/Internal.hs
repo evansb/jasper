@@ -29,8 +29,8 @@ import Text.Parsec.Expr
 import Language.Java.AST
 import Language.Java.Parser.Core
 
-javaProgram :: JParser [CompilationUnit]
-javaProgram = compilationUnit  `manyTill` eof
+javaProgram :: JParser CompilationUnit
+javaProgram = compilationUnit
 
 -- |
 -- = Productions from 3 __(Lexical Structures)__.
@@ -54,11 +54,11 @@ literal = Literal <$> do
 
 -- | Java Name
 typeName :: JParser TypeName
-typeName = TypeName <$> ident `sepBy1` dot
+typeName = ident `sepBy1` dot
 
 -- | Java name ended by dot, for parsing such as "this.class"
 typeNameDot :: JParser TypeName
-typeNameDot = TypeName <$> ident `sepEndBy1` dot
+typeNameDot = ident `sepEndBy1` dot
 
 -- |
 -- = Productions from §4 __(Types, Values, and Variables)__.
@@ -93,19 +93,10 @@ classOrInterfaceType :: JParser RefType
 classOrInterfaceType = ClassOrInterfaceType <$> classType
 
 classType :: JParser ClassType
-classType = try simpleClassType <|> aggrClassType
+classType = ClassType <$> typeName <*> optionMaybe typeArgs
 
 interfaceType :: JParser InterfaceType
 interfaceType = classType
-
-simpleClassType :: JParser ClassType
-simpleClassType = ClassType <$> ident <*> optionMaybe typeArgs
-
-aggrClassType :: JParser ClassType
-aggrClassType = AggrClassType
-             <$> (classType `manyTill` dot)
-             <*> ident
-             <*> optionMaybe typeArgs
 
 dims :: JParser Dims
 dims = length <$> many (lSquare <* rSquare)
@@ -187,7 +178,7 @@ packageDeclaration = PackageDeclaration
 -- | Package Modifier = Annotation
 -- | TODO Change this once Annotation is finished
 packageModifier :: JParser PackageModifier
-packageModifier = return PackageModifier
+packageModifier = keyword "wizard" *> return PackageModifier
                <?> "package modifier"
 
 -- | Import declaration
@@ -212,9 +203,9 @@ singleStaticImportDeclaration :: JParser ImportDeclaration
 singleStaticImportDeclaration = do
         tn <- keyword "import" *> keyword "static" *> typeNameDot <* semiColon
         case tn of
-            TypeName s@(_:_:_) -> do
+            s@(_:_:_) -> do
                     let (x,y) = splitAt (length s - 1) s
-                    return $ SingleStaticImportDeclaration (TypeName x) (head y)
+                    return $ SingleStaticImportDeclaration x (head y)
             _ -> unexpected "Cannot import whole class"
 
 staticImportOnDemandDeclaration :: JParser ImportDeclaration
@@ -227,14 +218,13 @@ staticImportOnDemandDeclaration = StaticImportOnDemandDeclaration
 -- TODO Add Annotation
 classDeclaration :: JParser ClassDeclaration
 classDeclaration = normalClassDeclaration
-
-classModifier :: JParser ClassModifier
-classModifier = fromModifierTable classModifierTable
+                <|> enumDeclaration
+                <?> "class declaration"
 
 normalClassDeclaration :: JParser ClassDeclaration
 normalClassDeclaration = Class
                       <$> classModifiers
-                      <*> (keyword "class" *> ident)
+                      <*> ident
                       <*> optionMaybe typeParams
                       <*> optionMaybe superClass
                       <*> optionMaybe superInterfaces
@@ -242,20 +232,25 @@ normalClassDeclaration = Class
                       <?> "normal class declaration"
 
 classModifiers :: JParser [ClassModifier]
-classModifiers = many classModifier
+classModifiers = classModifier `manyTill` keyword "class"
+
+classModifier :: JParser ClassModifier
+classModifier = fromModifierTable classModifierTable
 
 superClass :: JParser SuperClass
 superClass = Extends <$> (keyword "extends" *> classType)
 
 interfaceTypeList :: JParser InterfaceTypeList
 interfaceTypeList = classType `sepBy1` comma
+               <?> "interface type list"
 
 superInterfaces :: JParser SuperInterfaces
 superInterfaces = Implements <$> (keyword "implements" *> interfaceTypeList)
+               <?> "super interfaces"
 
 -- TODO Resolve this
 classBody :: JParser ClassBody
-classBody = lBrace *> many classBodyDeclaration <* rBrace
+classBody = lBrace *> (classBodyDeclaration `manyTill` rBrace)
 
 classBodyDeclaration :: JParser ClassBodyDeclaration
 classBodyDeclaration = choice (map try
@@ -272,11 +267,11 @@ classMemberDeclaration = choice (map try
                  , MemberClassDeclaration <$> classDeclaration
                  , MemberInterfaceDeclaration <$> interfaceDeclaration
                  , semiColon >> return EmptyClassMember
-                 ]) <?> "class member declration"
+                 ]) <?> "class member declaration"
 
 fieldDeclaration :: JParser ClassMemberDeclaration
 fieldDeclaration =  FieldDeclaration
-                <$> many fieldModifier
+                <$> (fieldModifier `manyTill` lookAhead unannType)
                 <*> unannType
                 <*> variableDeclaratorList
                 <*  semiColon
@@ -305,7 +300,7 @@ result = try (RType <$> unannType) <|> (pure RVoid <* keyword "void")
 
 methodDeclaration :: JParser ClassMemberDeclaration
 methodDeclaration = MethodDeclaration
-                <$> many methodModifier
+                <$> (methodModifier `manyTill` lookAhead methodHeader)
                 <*> methodHeader
                 <*> methodBody
                 <?> "method declaration"
@@ -450,8 +445,8 @@ primarySuperECI = PrimarySuperECI
        <*> (optionMaybe typeArgs <* keyword "super")
        <*> (lParen *> optionMaybe argList <* rParen <* semiColon)
 
-enumDeclaration :: JParser EnumDeclaration
-enumDeclaration = EnumDeclaration
+enumDeclaration :: JParser ClassDeclaration
+enumDeclaration = Enum
        <$> many classModifier
        <*> (keyword "enum" *> ident)
        <*> optionMaybe superInterfaces
@@ -474,7 +469,7 @@ enumConstant = EnumConstant
             <*> optionMaybe classBody
 
 enumConstantModifier :: JParser EnumConstantModifier
-enumConstantModifier = return EnumConstantModifier
+enumConstantModifier = keyword "annotation" *> return EnumConstantModifier
 
 enumBodyDeclaration :: JParser EnumBodyDeclarations
 enumBodyDeclaration = many classBodyDeclaration
@@ -820,23 +815,22 @@ resource =  Resource
 
 -- | Java Expressions
 primary :: JParser Primary
-primary = choice (map try [
-        literal
+primary = choice [
+        try literal
      ,  this
-     ,  typeNameDotThis
-     ,  typeNameDotClass
-     ,  typeNameArrDotClass
+     ,  try typeNameDotThis
+     ,  try typeNameDotClass
+     ,  try typeNameArrDotClass
      ,  voidDotClass
-     ,  classInstanceCreationExpression
      ,  expressionParen
+     ,  classInstanceCreationExpression
      ,  fieldAccess
      ,  arrayAccess
      ,  methodInvocation
      ,  methodReference
      ,  ArrayCreation <$> arrayCreationExpr
-     ]) <?> "expression"
+     ] <?> "primary expression"
 
--- | TODO resolve this
 expression :: JParser Expression
 expression = try (AssignmentExpression <$> assignmentExpression)
           <|> lambdaExpression
@@ -867,14 +861,14 @@ lambdaBody = try (Lambda <$> expression) <|> (LambdaBlock <$> block)
 
 -- | Expression surrounded by parenthesis
 expressionParen :: JParser Primary
-expressionParen = between lParen rParen (Expr <$> expression)
+expressionParen = lParen *> (Expr <$> expression) <* rParen
 
 -- | Java name followed by a .class
 -- | e.g foo.bar.qux.class
 typeNameDotClass :: JParser Primary
 typeNameDotClass = TypeNameDotClass
         <$> typeNameDot
-        <* keyword "class"
+        <*  keyword "class"
         <?> "typename.class"
 
 -- | Java array name followed by a .class
@@ -904,9 +898,22 @@ this :: JParser Primary
 this = pure This <* keyword "this"
 
 -- | Class instance creation expression
+-- | TODO Fix recursion bug.
 classInstanceCreationExpression :: JParser Primary
-classInstanceCreationExpression = ClassInstanceCreationExpression <$>
-     choice (map try [withIdentifier, withExpressionName, withPrimary])
+classInstanceCreationExpression = choice
+    [ ClassInstanceCreationExpression <$> withIdentifier
+    , ClassInstanceCreationExpression <$> withExpressionName
+    , buildExpressionParser [[ciceSuffix]] primary
+    ] <?> "class instance creation"
+
+ciceSuffix = Postfix $ do
+        ta0 <- dot *> keyword "new" *> optionMaybe typeArgs
+        id0 <- ident
+        tad0 <- typeArgsOrDiamond
+        argList0 <- between lParen rParen (optionMaybe argList)
+        cb0 <- optionMaybe classBody
+        return (\x -> ClassInstanceCreationExpression
+                            (WithPrimary x ta0 id0 tad0 argList0 cb0))
 
 withIdentifier :: JParser ClassInstanceCreation
 withIdentifier = WithIdentifier
@@ -926,7 +933,7 @@ withExpressionName = WithExpressionName
 
 withPrimary :: JParser ClassInstanceCreation
 withPrimary = WithPrimary
-        <$> expression
+        <$> (primary `chainl1` dotPrim)
         <*> (dot *> keyword "new" *> optionMaybe typeArgs)
         <*> ident
         <*> typeArgsOrDiamond
@@ -940,28 +947,48 @@ typeArgsOrDiamond =  try (TypeArgs <$> typeArgs)
 argList :: JParser ArgList
 argList = ArgList <$> expression `sepBy` comma
 
+dotPrim :: JParser (Primary -> Primary -> Primary)
+dotPrim = dot *> return Dot
+
 fieldAccess :: JParser Primary
-fieldAccess = FieldAccess <$> choice (map try
-        [ ExprFieldAccess <$> (primary <* dot) <*> ident
-        , SelfParentFieldAccess <$>  (keyword "super" *> dot *> ident)
-        , ParentFieldAccess <$> (typeNameDot <* keyword "super") <*> ident
-        ])
+fieldAccess =
+        buildExpressionParser [[faSuffix]] primary  <|>
+        FieldAccess <$> choice
+        [ SelfParentFieldAccess <$>  (keyword "super" *> dot *> ident)
+        , ParentFieldAccess <$> (typeNameDot <* keyword "super") <*> (dot *> ident)
+        ]
+
+faSuffix = Postfix $ do
+                i <- dot *> ident
+                return (\x -> FieldAccess (ExprFieldAccess x i))
 
 arrayAccess :: JParser Primary
-arrayAccess = ArrayAccess <$>
-           (try (NormalArrayAccess <$> typeName
-                                   <*> between lSquare rSquare expression)
-           <|> (ExprArrayAccess    <$> expression
-                                   <*> between lSquare rSquare expression))
+arrayAccess = ArrayAccess <$> (NormalArrayAccess
+                                <$> typeName
+                                <*> (lSquare *> expression <* rSquare))
+           <|> buildExpressionParser [[aaSuffix]] primary
+
+aaSuffix = Postfix $ do
+                i <- lSquare *> expression <* rSquare
+                return (\x -> ArrayAccess (ExprArrayAccess x i))
+
 
 methodInvocation :: JParser Primary
-methodInvocation = MethodInvocation <$> choice (map try
-        [ normalMethodInvocation
-        , nameMethodInvocation
-        , exprMethodInvocation
-        , selfParentMethodInvocation
-        , parentMethodInvocation
-        ])
+methodInvocation = choice
+        [ MethodInvocation <$> normalMethodInvocation
+        , MethodInvocation <$> nameMethodInvocation
+        , buildExpressionParser [[miSuffix]] primary
+        , MethodInvocation <$> selfParentMethodInvocation
+        , MethodInvocation <$> parentMethodInvocation
+        ] <?> "method invocation"
+
+miSuffix = Postfix $ do
+                    typeArgs0 <- dot *> optionMaybe typeArgs
+                    ident0 <- ident
+                    argList0 <- lParen *> optionMaybe argList <* rParen
+                    return (\x -> MethodInvocation (
+                                    ExprMethodInvocation
+                                        x typeArgs0 ident0 argList0))
 
 normalMethodInvocation :: JParser MethodInvocation
 normalMethodInvocation = NormalMethodInvocation
@@ -972,13 +999,6 @@ nameMethodInvocation :: JParser MethodInvocation
 nameMethodInvocation = NameMethodInvocation
         <$> typeNameDot
         <*> optionMaybe typeArgs
-        <*> ident
-        <*> between lParen rParen (optionMaybe argList)
-
-exprMethodInvocation :: JParser MethodInvocation
-exprMethodInvocation = ExprMethodInvocation
-        <$> expression
-        <*> (dot *> optionMaybe typeArgs)
         <*> ident
         <*> between lParen rParen (optionMaybe argList)
 
@@ -997,15 +1017,22 @@ parentMethodInvocation = ParentMethodInvocation
 
 -- TODO Resolve this
 methodReference :: JParser Primary
-methodReference = MethodReference <$> choice (map try
-        [ nameMethodReference
-        , refTypeMethodReference
-        , exprMethodReference
-        , selfParentMethodReference
-        , parentMethodReference
-        , classTypeMethodReference
-        , arrayTypeMethodReference
+methodReference = choice (
+        [ MethodReference <$> nameMethodReference
+        , MethodReference <$> refTypeMethodReference
+        ] ++
+        [ buildExpressionParser [[mrSuffix]] primary
+        ] ++
+        [ MethodReference <$> selfParentMethodReference
+        , MethodReference <$> parentMethodReference
+        , MethodReference <$> classTypeMethodReference
+        , MethodReference <$> arrayTypeMethodReference
         ]) <?> "method reference"
+
+mrSuffix = Postfix $ do
+                typeArg0 <- dColon *> optionMaybe typeArgs
+                ident0 <- ident
+                return (\x -> MethodReference (ExprMR x typeArg0 ident0))
 
 nameMethodReference :: JParser MethodReference
 nameMethodReference = NameMR
@@ -1021,7 +1048,7 @@ refTypeMethodReference = RefTypeMR
 
 exprMethodReference :: JParser MethodReference
 exprMethodReference = ExprMR
-        <$> expression
+        <$> (primary `chainl1` dotPrim)
         <*> (dColon *> optionMaybe typeArgs)
         <*> ident
 
@@ -1071,13 +1098,13 @@ classTypeACE = ClassTypeACE
 primTypeACEI :: JParser ArrayCreationExpr
 primTypeACEI = PrimTypeACEI
         <$> (keyword "new" *> primType)
-        <*> (length <$> many dims)
+        <*> dims
         <*> arrayInitializer
 
 classTypeACEI :: JParser ArrayCreationExpr
 classTypeACEI = ClassTypeACEI
         <$> (keyword "new" *> classType)
-        <*> (length <$> many dims)
+        <*> dims
         <*> arrayInitializer
 
 assignmentOperator :: JParser T
@@ -1169,4 +1196,3 @@ conditionalExpr = Infix (ConditionalExpr <$>
 primitiveTypes = S.fromList
       [ "byte" , "short" , "int" , "long" , "char",
         "float" , "double" , "boolean"]
-

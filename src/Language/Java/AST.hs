@@ -22,7 +22,7 @@ import Text.Parsec
 
 type Token = (T, SourcePos)
 
--- | Produced from 'Language.Java.Lexer'.
+-- | Produced from 'Language.Java.Lexer'
 data T  = Keyword    String
         | Operator   String
         -- | Tokens
@@ -47,8 +47,7 @@ data T  = Keyword    String
 data Ident = Ident String
            PRODUCTION
 
-data TypeName = TypeName [Ident]
-          PRODUCTION
+type TypeName = [Ident]
 
 data Type = PrimType PrimType
           | RefType RefType
@@ -72,8 +71,7 @@ data RefType = ClassOrInterfaceType ClassOrInterfaceType
 
 type ClassOrInterfaceType = ClassType
 
-data ClassType = ClassType Ident (Maybe TypeArgs)
-               | AggrClassType [ClassType] Ident (Maybe TypeArgs)
+data ClassType = ClassType TypeName (Maybe TypeArgs)
                PRODUCTION
 
 type InterfaceType = ClassType
@@ -145,6 +143,8 @@ data SuperInterfaces = Implements InterfaceTypeList
 data ClassDeclaration = Class [ClassModifier] Ident
                       (Maybe [TypeParam]) (Maybe SuperClass)
                       (Maybe SuperInterfaces) ClassBody
+                      | Enum [ClassModifier]
+                        Ident (Maybe SuperInterfaces) EnumBody
                       PRODUCTION
 
 data Modifier = Public    | Protected    | Private   | Abstract
@@ -259,10 +259,6 @@ data ExplicitConstructorInvocation =
                   | NameSuperECI TypeName (Maybe TypeArgs) (Maybe ArgList)
                   | PrimarySuperECI Primary (Maybe TypeArgs) (Maybe ArgList)
                   PRODUCTION
-
-data EnumDeclaration = EnumDeclaration [ClassModifier]
-                       Ident (Maybe SuperInterfaces) EnumBody
-                     PRODUCTION
 
 data EnumBody = EnumBody (Maybe EnumConstantList) (Maybe EnumBodyDeclarations)
               PRODUCTION
@@ -451,6 +447,8 @@ data Primary = Literal Literal
                 | MethodReference MethodReference
                 -- | Array creation expression
                 | ArrayCreation ArrayCreationExpr
+                -- | Composition of two or more primaries.
+                | Dot Primary Primary
                 PRODUCTION
 
 -- | Class instance creation [classInstanceCreation]
@@ -462,7 +460,7 @@ data ClassInstanceCreation =
                 TypeArgsOrDiam (Maybe ArgList) (Maybe ClassBody)
      | WithExpressionName TypeName (Maybe TypeArgs)
                 TypeArgsOrDiam (Maybe ArgList) (Maybe ClassBody)
-     | WithPrimary Expression (Maybe TypeArgs) Ident
+     | WithPrimary Primary (Maybe TypeArgs) Ident
                 TypeArgsOrDiam (Maybe ArgList) (Maybe ClassBody)
      PRODUCTION
 
@@ -481,15 +479,15 @@ data FieldAccess = ExprFieldAccess Primary Ident
 
 -- | Array Access
 -- Style 1 <name>[<expression>]
--- Style 2 <expression>[<expression>]
+-- Style 2 <primary>[<expression>]
 data ArrayAccess = NormalArrayAccess TypeName Expression
-                 | ExprArrayAccess Expression Expression
+                 | ExprArrayAccess Primary Expression
                  PRODUCTION
 
 data MethodInvocation =
           NormalMethodInvocation TypeName (Maybe ArgList)
         | NameMethodInvocation TypeName (Maybe TypeArgs) Ident (Maybe ArgList)
-        | ExprMethodInvocation Expression (Maybe TypeArgs) Ident (Maybe ArgList)
+        | ExprMethodInvocation Primary (Maybe TypeArgs) Ident (Maybe ArgList)
         | SelfParentMethodInvocation (Maybe TypeArgs) Ident (Maybe ArgList)
         | ParentMethodInvocation TypeName (Maybe TypeArgs) Ident (Maybe ArgList)
         PRODUCTION
@@ -499,7 +497,7 @@ data ArgList = ArgList [Expression]
 
 data MethodReference = NameMR TypeName (Maybe TypeArgs) Ident
                      | RefTypeMR RefType (Maybe TypeArgs) Ident
-                     | ExprMR  Expression (Maybe TypeArgs) Ident
+                     | ExprMR  Primary (Maybe TypeArgs) Ident
                      | SelfParentMR (Maybe TypeArgs) Ident
                      | ParentMR TypeName (Maybe TypeArgs) Ident
                      | ClassTypeMR ClassType (Maybe TypeArgs)

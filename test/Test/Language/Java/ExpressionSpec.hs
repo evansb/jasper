@@ -18,11 +18,9 @@ spec = describe "Primary Expression Parser" $ do
         it "Should be able to parse typename followed by dot class" $ do
             primary `shouldParseJ`
                 [   "Mocha.Latte.class" `to` TypeNameDotClass
-                                        (TypeName [Ident "Mocha",
-                                                   Ident "Latte"])
+                                        [Ident "Mocha", Ident "Latte"]
                   , "Mocha.Latte[][][].class" `to` TypeNameArrDotClass
-                                        (TypeName [Ident "Mocha",
-                                                   Ident "Latte"])
+                                        [Ident "Mocha", Ident "Latte"]
                                         3
                 ]
             primary `shouldFailOnJ`
@@ -30,8 +28,7 @@ spec = describe "Primary Expression Parser" $ do
         it "Should be able to parse typename followed by dot this" $
             primary `shouldParseJ`
                 [ "Mocha.Latte.this" `to` TypeNameDotThis
-                                        (TypeName [Ident "Mocha",
-                                                   Ident "Latte"])]
+                                        [Ident "Mocha", Ident "Latte"]]
         it "Should be able to parse void dot class" $
             primary `shouldParseJ` ["void.class" `to` VoidDotClass]
         it "Should be able to parse this" $
