@@ -1,0 +1,31 @@
+[
+(
+    "a = 1 + 2;",
+    StatementWTS (ExpressionStmt 
+    (Assignment (LHSIdent (Ident "a")) (Operator "=") 
+    (Expression (Term (BinaryExpr (Operator "+") 
+        (PrimExpr (Literal (IntegerLiteral 1)))
+        (PrimExpr (Literal (IntegerLiteral 2))))))))
+),
+
+(
+    "if (false) {}",
+    IfThenStmt (Expression
+        (Term (PrimExpr (Literal (BooleanLiteral False)))))
+        (StatementWTS (BlockStmt EmptyBlock))
+),
+
+(
+    "if (false) { if (true) {} } else { if (true) {} else {} }",
+    IfThenElseStmt (Expression (Term (PrimExpr (Literal (BooleanLiteral False)))))
+    (StatementWTSNSI
+        (BlockStmt (Block [Statement (IfThenStmt
+            (Expression (Term (PrimExpr (Literal (BooleanLiteral True)))))
+            (StatementWTS (BlockStmt EmptyBlock)))])))
+    (StatementWTS
+        (BlockStmt (Block [Statement (IfThenElseStmt
+            (Expression (Term (PrimExpr (Literal (BooleanLiteral True)))))
+            (StatementWTSNSI (BlockStmt EmptyBlock))
+            (StatementWTS (BlockStmt EmptyBlock)))])))
+)
+]

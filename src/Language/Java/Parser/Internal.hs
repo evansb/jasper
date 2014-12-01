@@ -48,6 +48,7 @@ literal = Literal <$> do
         TokLong t   -> return $ IntegerLiteral t
         TokChar s   -> return $ CharacterLiteral s
         TokString s -> return $ StringLiteral s
+        TokBool s   -> return $ BooleanLiteral s
         TokNull     -> return NullLiteral
         s           -> unexpected (show s)
        <?> "literal"
@@ -566,8 +567,8 @@ statement :: JParser Statement
 statement = choice
           [ StatementWTS <$> statementWTS
           , labeledStmt
+          , try ifThenElseStmt
           , ifThenStmt
-          , ifThenElseStmt
           , whileStmt
           , ForStmt <$> forStmt
           ] <?> "statement"

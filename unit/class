@@ -1,0 +1,29 @@
+[
+(
+    "class Buffer<K,V extends Bounded<K,V>> { private int a; }",
+    Class [] (Ident "Buffer")
+    (Just [TypeParam (Ident "K") Nothing,TypeParam (Ident "V")
+    (Just (ExtendsClassType (ClassType [Ident "Bounded"]
+    (Just [ActualType (ClassOrInterfaceType (ClassType [Ident "K"] Nothing)),
+    ActualType (ClassOrInterfaceType (ClassType [Ident "V"] Nothing))])) []))])
+    Nothing Nothing
+    [ClassMemberDeclaration
+    (FieldDeclaration [Private] (PrimType IntT)
+    [VariableDeclarator (Ident "a",0) Nothing])]
+),
+
+(
+    "class Main { static {} static class Boo {} interface Hello {} }",
+    Class [] (Ident "Main") Nothing Nothing Nothing
+    [
+        StaticInitializer EmptyBlock,
+        ClassMemberDeclaration
+            (MemberClassDeclaration
+                (Class [Static] (Ident "Boo") Nothing  Nothing  Nothing [])),
+        ClassMemberDeclaration
+            (MemberInterfaceDeclaration
+                (NormalInterface [] (Ident "Hello") Nothing Nothing []))
+    ]
+)
+
+]

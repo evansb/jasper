@@ -1,0 +1,36 @@
+[
+(
+    "1 && 4 * 2 + 1",
+    Expression (Term
+    (BinaryExpr (Operator "&&")
+        (PrimExpr (Literal (IntegerLiteral 1)))
+        (BinaryExpr (Operator "+")
+            (BinaryExpr (Operator "*")
+                (PrimExpr (Literal (IntegerLiteral 4)))
+                (PrimExpr (Literal (IntegerLiteral 2))))
+            (PrimExpr (Literal (IntegerLiteral 1))))))
+),
+
+(
+    "foo(bar * baz, qux, qux)",
+    Expression (Term (PrimExpr
+    (MethodInvocation
+    (NormalMethodInvocation [Ident "foo"] (Just (ArgList [
+        Expression (Term (BinaryExpr (Operator "*")
+            (NameExpr [Ident "bar"]) (NameExpr [Ident "baz"]))),
+        Expression (Term (NameExpr [Ident "qux"])),
+        Expression (Term (NameExpr [Ident "qux"]))]))))))
+),
+
+(
+    "alpha.super.beta[8 * quux[4]]",
+    Expression (Term (PrimExpr (ArrayAccess
+    (ExprArrayAccess
+    (FieldAccess (ParentFieldAccess [Ident "alpha"] (Ident "beta")))
+    (Expression (Term (BinaryExpr (Operator "*")
+    (PrimExpr (Literal (IntegerLiteral 8)))
+    (PrimExpr (ArrayAccess (NormalArrayAccess [Ident "quux"]
+    (Expression (Term (PrimExpr (Literal (IntegerLiteral 4)))))))))))))))
+)
+
+]
