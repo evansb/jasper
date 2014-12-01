@@ -18,7 +18,7 @@ module Language.Java.AST where
 
 import Text.Parsec
 
-#define PRODUCTION deriving(Eq, Show)
+#define PRODUCTION deriving(Eq, Show, Read)
 
 type Token = (T, SourcePos)
 

@@ -493,10 +493,11 @@ interfaceModifier :: JParser InterfaceModifier
 interfaceModifier = fromModifierTable interfaceModifierTable
 
 extendsInterfaces :: JParser ExtendsInterfaces
-extendsInterfaces = ExtendsInterfaces <$> interfaceTypeList
+extendsInterfaces = ExtendsInterfaces
+                 <$> (keyword "extends" *> interfaceTypeList)
 
 interfaceBody :: JParser InterfaceBody
-interfaceBody = between lParen rParen (many interfaceMemberDeclaration)
+interfaceBody = between lBrace rBrace (many interfaceMemberDeclaration)
 
 interfaceMemberDeclaration :: JParser InterfaceMemberDeclaration
 interfaceMemberDeclaration = choice
@@ -547,16 +548,16 @@ blockStatements :: JParser BlockStatements
 blockStatements = many1 blockStatement
 
 blockStatement :: JParser BlockStatement
-blockStatement = choice
+blockStatement = choice (map try
               [ LocalVariableDeclarationStmt <$>
-                    (localVariableDeclaration <* semiColon)
+                (localVariableDeclaration <* semiColon)
               , ClassDeclarationStmt <$> classDeclaration
               , Statement <$> statement
-              ] <?> "block statement"
+              ]) <?> "block statement"
 
 localVariableDeclaration :: JParser LocalVariableDeclaration
 localVariableDeclaration = LocalVariableDeclaration
-             <$> many1 variableModifier
+             <$> many variableModifier
              <*> unannType
              <*> variableDeclaratorList
              <?> "local variable declaration"

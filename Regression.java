@@ -9,21 +9,33 @@ import javax.swing.*;
 import java.util.*;
 import static java.lang.Math.PI;
 
-class Foo {
-
+interface Moo {
+    void foo();
 }
 
-public class Regression<T extends Comparable<T>> {
+interface Hoo {
+}
+
+public abstract class Regression<T extends Comparable<T>> extends Object
+    implements Moo, Hoo {
+
     static int a;
+    private String name;
+    private ArrayList<String> names;
+
     /* Static initializer */
     static {
         a = 1 + (2 * 3);
     }
+
+    private class Foo {}
 
     public static void main(String[] args) {
         System.out.println("\"Hello \nWorld\""
                 + a
                 + 1000.0
                 + 0x300);
+        int foo = 3;
+        final double boo = 3.0;
     }
 }
