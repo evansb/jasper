@@ -113,13 +113,12 @@ dot             = satisfy isPeriod
 dColon          = satisfy isDColon
 
 fromModifierTable :: S.HashSet String -> JParser Modifier
-fromModifierTable whiteList = do
-        tok <- getSS <$> satisfy isKeyword
-        if tok `S.member` whiteList then
-            case M.lookup tok modifierTable of
-                Just modifier -> return modifier
-                Nothing       -> unexpected "invalid modifier"
-        else unexpected "invalid modifier"
+fromModifierTable wl = 
+        (\k -> modifierTable M.! getSS k) 
+        <$> satisfy (isModifierOf wl)
+
+isModifierOf whiteList kwd = isKeyword kwd &&
+                    (getSS kwd `S.member` whiteList)
 
 (|>>) :: JParser a -> JParser (a -> a) -> JParser a
 (|>>) left suffix = do

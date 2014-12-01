@@ -84,9 +84,9 @@ primType = (do
 
 refType :: JParser RefType
 refType = choice (map try
-        [ classOrInterfaceType
+        [ ArrayType    <$> arrayType
+        , classOrInterfaceType
         , TypeVariable <$> typeVariable
-        , ArrayType    <$> arrayType
         ]) <?> "reference type"
 
 classOrInterfaceType :: JParser RefType
@@ -125,8 +125,8 @@ typeParam = TypeParam <$> ident <*> optionMaybe typeBound
 
 typeBound :: JParser TypeBound
 typeBound = keyword "extends" *> choice (map try
-          [ ExtendsTypeVar   <$> typeVariable
-          , ExtendsClassType <$> classType <*> many additionalBound
+          [ ExtendsClassType <$> classType <*> many additionalBound
+          , ExtendsTypeVar   <$> typeVariable
           ])
 
 additionalBound :: JParser AdditionalBound
@@ -171,8 +171,7 @@ compilationUnit = CompilationUnit
 packageDeclaration :: JParser PackageDeclaration
 packageDeclaration = PackageDeclaration
         <$> many packageModifier
-        <*> typeName
-        <*  semiColon
+        <*> (keyword "package" *> typeName <* semiColon)
         <?> "package declaration"
 
 -- | Package Modifier = Annotation
@@ -299,7 +298,7 @@ result = try (RType <$> unannType) <|> (pure RVoid <* keyword "void")
 
 methodDeclaration :: JParser ClassMemberDeclaration
 methodDeclaration = MethodDeclaration
-                <$> (methodModifier `manyTill` lookAhead methodHeader)
+                <$> many methodModifier
                 <*> methodHeader
                 <*> methodBody
                 <?> "method declaration"
@@ -313,6 +312,7 @@ methodDeclarator = MethodDeclarator
 
 methodHeader :: JParser MethodHeader
 methodHeader = try methodHeaderWithoutTP <|> methodHeaderTP
+            <?> "method header"
 
 methodHeaderWithoutTP :: JParser MethodHeader
 methodHeaderWithoutTP = MethodHeader
@@ -331,9 +331,10 @@ methodModifier :: JParser MethodModifier
 methodModifier = fromModifierTable methodModifierTable
 
 formalParameterList :: JParser FormalParameterList
-formalParameterList = (\x y -> x ++ [y])
-                   <$> formalParameter `sepEndBy` comma
-                   <*> lastFormalParameter
+formalParameterList = (++)
+                   <$> formalParameter `sepEndBy1` comma
+                   <*> (try ((:[]) <$> lastFormalParameter)
+                   <|> return [])
 
 formalParameters :: JParser [FormalParameter]
 formalParameters = choice
@@ -828,7 +829,7 @@ primary = choice (map try [
      ,  methodInvocation
      ,  methodReference
      ,  ArrayCreation <$> arrayCreationExpr
-     ]) |>> primarySuffix 
+     ]) |>> primarySuffix
      <?> "primary expression"
 
 primarySuffix :: JParser (Primary -> Primary)
@@ -958,7 +959,7 @@ faSuffix = do
             return (\x -> FieldAccess (ExprFieldAccess x i))
 
 arrayAccess :: JParser Primary
-arrayAccess = ArrayAccess <$> 
+arrayAccess = ArrayAccess <$>
     (NormalArrayAccess <$> typeName
                        <*> (lSquare *> expression <* rSquare))
 
