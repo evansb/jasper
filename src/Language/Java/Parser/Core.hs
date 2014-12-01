@@ -121,6 +121,12 @@ fromModifierTable whiteList = do
                 Nothing       -> unexpected "invalid modifier"
         else unexpected "invalid modifier"
 
+(|>>) :: JParser a -> JParser (a -> a) -> JParser a
+(|>>) left suffix = do
+    l <- left
+    s <- option [] (many1 suffix)
+    return $ foldl (\x y -> y x) l s
+
 -- | Stores valid keywords for class modifier.
 modifierTable :: M.Map String Modifier
 modifierTable = M.fromList [

@@ -99,7 +99,7 @@ interfaceType :: JParser InterfaceType
 interfaceType = classType
 
 dims :: JParser Dims
-dims = length <$> many (lSquare <* rSquare)
+dims = length <$> many1 (lSquare <* rSquare)
 
 arrayType :: JParser ArrayType
 arrayType = choice (map try
@@ -248,9 +248,8 @@ superInterfaces :: JParser SuperInterfaces
 superInterfaces = Implements <$> (keyword "implements" *> interfaceTypeList)
                <?> "super interfaces"
 
--- TODO Resolve this
 classBody :: JParser ClassBody
-classBody = lBrace *> (classBodyDeclaration `manyTill` rBrace)
+classBody = lBrace *> many classBodyDeclaration <* rBrace
 
 classBodyDeclaration :: JParser ClassBodyDeclaration
 classBodyDeclaration = choice (map try
@@ -532,7 +531,7 @@ variableInitializer = choice
                     ] <?> "variable initializer"
 
 arrayInitializer :: JParser ArrayInitializer
-arrayInitializer = lBrace *> (variableInitializer `sepBy` comma) <* rBrace
+arrayInitializer = lBrace *> (variableInitializer `sepBy1` comma) <* rBrace
 
 -- |
 -- = Productions from 14 (Blocks and Statements)
@@ -556,7 +555,7 @@ blockStatement = choice
 
 localVariableDeclaration :: JParser LocalVariableDeclaration
 localVariableDeclaration = LocalVariableDeclaration
-             <$> many variableModifier
+             <$> many1 variableModifier
              <*> unannType
              <*> variableDeclaratorList
              <?> "local variable declaration"
@@ -581,7 +580,7 @@ statementNSI = choice
              ] <?> "statement no short if"
 
 statementWTS :: JParser StatementWTS
-statementWTS = choice
+statementWTS = choice (map try
              [ BlockStmt <$> block
              , emptyStatement
              , expressionStmt
@@ -595,7 +594,7 @@ statementWTS = choice
              , synchronizedStmt
              , throwStmt
              , TryStmt <$> tryStmt
-             ] <?> "statement without trailing substatement"
+             ]) <?> "statement without trailing substatement"
 
 emptyStatement :: JParser StatementWTS
 emptyStatement = semiColon >> pure EmptyStmt
@@ -815,7 +814,7 @@ resource =  Resource
 
 -- | Java Expressions
 primary :: JParser Primary
-primary = choice [
+primary = choice (map try [
         try literal
      ,  this
      ,  try typeNameDotThis
@@ -829,11 +828,17 @@ primary = choice [
      ,  methodInvocation
      ,  methodReference
      ,  ArrayCreation <$> arrayCreationExpr
-     ] <?> "primary expression"
+     ]) |>> primarySuffix 
+     <?> "primary expression"
+
+primarySuffix :: JParser (Primary -> Primary)
+primarySuffix = choice (map try [ciceSuffix , aaSuffix , miSuffix , faSuffix])
 
 expression :: JParser Expression
-expression = try (Expression <$> assignmentExpression)
-          <|> lambdaExpression
+expression = choice (map try
+           [ lambdaExpression
+           , Expression <$> assignmentExpression
+           ]) <?> "expression"
 
 lambdaExpression :: JParser Expression
 lambdaExpression = LambdaExpression
@@ -902,10 +907,11 @@ classInstanceCreationExpression :: JParser Primary
 classInstanceCreationExpression = choice
     [ ClassInstanceCreationExpression <$> withIdentifier
     , ClassInstanceCreationExpression <$> withExpressionName
-    , buildExpressionParser [[ciceSuffix]] primary
     ] <?> "class instance creation"
 
-ciceSuffix = Postfix $ do
+-- | Suffix for Class Instance creation.
+ciceSuffix :: JParser (Primary -> Primary)
+ciceSuffix = do
         ta0 <- dot *> keyword "new" *> optionMaybe typeArgs
         id0 <- ident
         tad0 <- typeArgsOrDiamond
@@ -930,64 +936,53 @@ withExpressionName = WithExpressionName
         <*> between lParen rParen (optionMaybe argList)
         <*> optionMaybe classBody
 
-withPrimary :: JParser ClassInstanceCreation
-withPrimary = WithPrimary
-        <$> (primary `chainl1` dotPrim)
-        <*> (dot *> keyword "new" *> optionMaybe typeArgs)
-        <*> ident
-        <*> typeArgsOrDiamond
-        <*> between lParen rParen (optionMaybe argList)
-        <*> optionMaybe classBody
-
 typeArgsOrDiamond :: JParser TypeArgsOrDiam
 typeArgsOrDiamond =  try (TypeArgs <$> typeArgs)
                 <|> (pure Diamond <* lessThan <* greaterThan)
 
 argList :: JParser ArgList
-argList = ArgList <$> expression `sepBy` comma
+argList = ArgList <$> expression `sepBy1` comma
 
 dotPrim :: JParser (Primary -> Primary -> Primary)
 dotPrim = dot *> return Dot
 
 fieldAccess :: JParser Primary
-fieldAccess =
-        buildExpressionParser [[faSuffix]] primary  <|>
-        FieldAccess <$> choice
+fieldAccess = FieldAccess <$> choice
         [ SelfParentFieldAccess <$>  (keyword "super" *> dot *> ident)
         , ParentFieldAccess <$> (typeNameDot <* keyword "super") <*> (dot *> ident)
         ]
 
-faSuffix = Postfix $ do
-                i <- dot *> ident
-                return (\x -> FieldAccess (ExprFieldAccess x i))
+faSuffix :: JParser (Primary -> Primary)
+faSuffix = do
+            i <- dot *> ident
+            return (\x -> FieldAccess (ExprFieldAccess x i))
 
 arrayAccess :: JParser Primary
-arrayAccess = ArrayAccess <$> (NormalArrayAccess
-                                <$> typeName
-                                <*> (lSquare *> expression <* rSquare))
-           <|> buildExpressionParser [[aaSuffix]] primary
+arrayAccess = ArrayAccess <$> 
+    (NormalArrayAccess <$> typeName
+                       <*> (lSquare *> expression <* rSquare))
 
-aaSuffix = Postfix $ do
-                i <- lSquare *> expression <* rSquare
-                return (\x -> ArrayAccess (ExprArrayAccess x i))
+aaSuffix = do
+            i <- lSquare *> expression <* rSquare
+            return (\x -> ArrayAccess (ExprArrayAccess x i))
 
 
 methodInvocation :: JParser Primary
 methodInvocation = choice
         [ MethodInvocation <$> normalMethodInvocation
         , MethodInvocation <$> nameMethodInvocation
-        , buildExpressionParser [[miSuffix]] primary
         , MethodInvocation <$> selfParentMethodInvocation
         , MethodInvocation <$> parentMethodInvocation
         ] <?> "method invocation"
 
-miSuffix = Postfix $ do
-                    typeArgs0 <- dot *> optionMaybe typeArgs
-                    ident0 <- ident
-                    argList0 <- lParen *> optionMaybe argList <* rParen
-                    return (\x -> MethodInvocation (
-                                    ExprMethodInvocation
-                                        x typeArgs0 ident0 argList0))
+miSuffix :: JParser (Primary -> Primary)
+miSuffix = do
+            typeArgs0 <- dot *> optionMaybe typeArgs
+            ident0 <- ident
+            argList0 <- lParen *> optionMaybe argList <* rParen
+            return (\x -> MethodInvocation (
+                            ExprMethodInvocation
+                                x typeArgs0 ident0 argList0))
 
 normalMethodInvocation :: JParser MethodInvocation
 normalMethodInvocation = NormalMethodInvocation
@@ -1016,22 +1011,20 @@ parentMethodInvocation = ParentMethodInvocation
 
 -- TODO Resolve this
 methodReference :: JParser Primary
-methodReference = choice (
-        [ MethodReference <$> nameMethodReference
-        , MethodReference <$> refTypeMethodReference
-        ] ++
-        [ buildExpressionParser [[mrSuffix]] primary
-        ] ++
-        [ MethodReference <$> selfParentMethodReference
-        , MethodReference <$> parentMethodReference
-        , MethodReference <$> classTypeMethodReference
-        , MethodReference <$> arrayTypeMethodReference
-        ]) <?> "method reference"
+methodReference = MethodReference <$> choice
+        [ nameMethodReference
+        , refTypeMethodReference
+        , selfParentMethodReference
+        , parentMethodReference
+        , classTypeMethodReference
+        , arrayTypeMethodReference
+        ] <?> "method reference"
 
-mrSuffix = Postfix $ do
-                typeArg0 <- dColon *> optionMaybe typeArgs
-                ident0 <- ident
-                return (\x -> MethodReference (ExprMR x typeArg0 ident0))
+mrSuffix :: JParser (Primary -> Primary)
+mrSuffix = do
+            typeArg0 <- dColon *> optionMaybe typeArgs
+            ident0 <- ident
+            return (\x -> MethodReference (ExprMR x typeArg0 ident0))
 
 nameMethodReference :: JParser MethodReference
 nameMethodReference = NameMR
@@ -1119,7 +1112,7 @@ leftHandSide = try (LHSExpr <$> choice [ fieldAccess, arrayAccess ])
         <?> "lhs"
 
 assignmentExpression :: JParser AssignmentExpression
-assignmentExpression = try (Term <$> term) <|> assignment
+assignmentExpression = try assignment <|> (Term <$> term)
 
 assignment :: JParser AssignmentExpression
 assignment = Assignment
@@ -1128,31 +1121,7 @@ assignment = Assignment
        <*> expression
        <?> "assignment"
 
-postfixExpr :: JParser PostfixExpr
-postfixExpr = choice
-       [ PrimPostfixExpr <$> primary
-       , NamePostfixExpr <$> typeName
-       , PostIncrementExpr <$> postfixExpr <* operator "++"
-       , PostDecrementExpr <$> postfixExpr <* operator "++"
-       ] <?> "postfix expression"
-
-unaryExpr :: JParser UnaryExpression
-unaryExpr = choice
-       [ PreIncrementExpr <$> (operator "++" *> unaryExpr)
-       , PreDecrementExpr <$> (operator "--" *> unaryExpr)
-       , UnaryPlus <$> (operator "+" *> unaryExpr)
-       , UnaryMinus <$> (operator "-" *> unaryExpr)
-       , UnaryNPM <$> unaryExprNPM
-       ] <?> "unary expression"
-
-unaryExprNPM :: JParser UnaryExpressionNotPlusMinus
-unaryExprNPM = choice
-       [ UnaryPostfix <$> postfixExpr
-       , UnaryTilde <$> (operator "~" *> unaryExpr)
-       , UnaryNegate <$> (operator "!" *> unaryExpr)
-       , UnaryCast <$> castExpr
-       ] <?> "unary not plus minus"
-
+{-
 castExpr :: JParser CastExpression
 castExpr = choice
        [ UnaryToPrim <$> (lParen *> primType <* rParen) <*> unaryExpr
@@ -1161,12 +1130,13 @@ castExpr = choice
        , LambdaToRef <$> (lParen *> refType) <*> (many classType <* rParen)
                     <*> lambdaExpression
        ] <?> "cast expression"
+-}
 
 term :: JParser Term
 term = buildExpressionParser table opExpr <?> "term"
 
 opExpr :: JParser Term
-opExpr = choice [ PrimExpr <$> primary, NameExpr <$> typeName ]
+opExpr = choice $ map try [ PrimExpr <$> primary, NameExpr <$> typeName ]
 
 -- | Operator precedence table
 table  = [ postfix <$> [ "++", "--" ]
