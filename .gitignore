@@ -1,5 +1,4 @@
 dist/
-java-src/
 *.zip
 *.txt
 .cabal-sandbox/
