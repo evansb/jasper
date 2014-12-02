@@ -65,7 +65,7 @@ typeNameDot = ident `sepEndBy1` dot
 -- = Productions from §4 __(Types, Values, and Variables)__.
 
 type_ :: JParser Type
-type_ = try (PrimType <$> primType) <|> (RefType <$> refType)
+type_ = try (RefType <$> refType) <|> (PrimType <$> primType)
 
 -- | Integral and floating point types are merged into one production.
 primType :: JParser PrimType
@@ -698,11 +698,11 @@ doStmt = keyword "do" *> (DoStmt
                 expression <* rParen <* semiColon))
 
 forStmt :: JParser ForStatement
-forStmt = basicForStmt <|> enhancedForStmt
+forStmt = try basicForStmt <|> enhancedForStmt
        <?> "for statement"
 
 forStmtNSI :: JParser ForStatementNSI
-forStmtNSI =  basicForStmtNSI <|> enhancedForStmtNSI
+forStmtNSI =  try basicForStmtNSI <|> enhancedForStmtNSI
           <?> "for statement no short if"
 
 basicForStmt :: JParser ForStatement
@@ -907,17 +907,17 @@ this = pure This <* keyword "this"
 
 -- | Class instance creation expression
 classInstanceCreationExpression :: JParser Primary
-classInstanceCreationExpression = choice
+classInstanceCreationExpression = choice (map try
     [ ClassInstanceCreationExpression <$> withIdentifier
     , ClassInstanceCreationExpression <$> withExpressionName
-    ] <?> "class instance creation"
+    ]) <?> "class instance creation"
 
 -- | Suffix for Class Instance creation.
 ciceSuffix :: JParser (Primary -> Primary)
 ciceSuffix = do
         ta0 <- dot *> keyword "new" *> optionMaybe typeArgs
         id0 <- ident
-        tad0 <- typeArgsOrDiamond
+        tad0 <- optionMaybe typeArgsOrDiamond
         argList0 <- between lParen rParen (optionMaybe argList)
         cb0 <- optionMaybe classBody
         return (\x -> ClassInstanceCreationExpression
@@ -927,7 +927,7 @@ withIdentifier :: JParser ClassInstanceCreation
 withIdentifier = WithIdentifier
         <$> (keyword "new" *> optionMaybe typeArgs)
         <*> ident
-        <*> typeArgsOrDiamond
+        <*> optionMaybe typeArgsOrDiamond
         <*> between lParen rParen (optionMaybe argList)
         <*> optionMaybe classBody
 
@@ -935,7 +935,7 @@ withExpressionName :: JParser ClassInstanceCreation
 withExpressionName = WithExpressionName
         <$> typeName
         <*> (dot *> keyword "new" *> optionMaybe typeArgs)
-        <*> typeArgsOrDiamond
+        <*> optionMaybe typeArgsOrDiamond
         <*> between lParen rParen (optionMaybe argList)
         <*> optionMaybe classBody
 
@@ -1014,14 +1014,14 @@ parentMethodInvocation = ParentMethodInvocation
 
 -- TODO Resolve this
 methodReference :: JParser Primary
-methodReference = MethodReference <$> choice
+methodReference = MethodReference <$> choice (map try
         [ nameMethodReference
         , refTypeMethodReference
         , selfParentMethodReference
         , parentMethodReference
         , classTypeMethodReference
         , arrayTypeMethodReference
-        ] <?> "method reference"
+        ]) <?> "method reference"
 
 mrSuffix :: JParser (Primary -> Primary)
 mrSuffix = do
@@ -1068,27 +1068,29 @@ arrayTypeMethodReference = ArrayTypeMR
         <$> (arrayType <* dColon <* keyword "new")
 
 dimExprs :: JParser [DimExpr]
-dimExprs = many1 (DimExpr <$> (lSquare *> expression <* rSquare))
+dimExprs = many1 (DimExpr <$> (lSquare *> optionMaybe expression <* rSquare))
 
 arrayCreationExpr :: JParser ArrayCreationExpr
-arrayCreationExpr = choice
+arrayCreationExpr = choice (map try
          [  primTypeACE
          ,  classTypeACE
          ,  primTypeACEI
          ,  classTypeACEI
-         ] <?> "array creation expression"
+         ]) <?> "array creation expression"
 
 primTypeACE :: JParser ArrayCreationExpr
-primTypeACE = PrimTypeACE
-        <$> (keyword "new" *> primType)
-        <*> dimExprs
-        <*> dims
+primTypeACE = do
+        pt <- keyword "new" *> primType
+        de <- dimExprs
+        m  <- optionMaybe dims
+        return $ PrimTypeACE pt de (length de + fromMaybe 0 m)
 
 classTypeACE :: JParser ArrayCreationExpr
-classTypeACE = ClassTypeACE
-        <$> (keyword "new" *> classType)
-        <*> dimExprs
-        <*> dims
+classTypeACE = do
+        ct <- keyword "new" *> classType
+        de <- dimExprs
+        m  <- optionMaybe dims
+        return $ ClassTypeACE ct de (length de + fromMaybe 0 m)
 
 primTypeACEI :: JParser ArrayCreationExpr
 primTypeACEI = PrimTypeACEI

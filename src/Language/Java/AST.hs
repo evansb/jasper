@@ -457,11 +457,11 @@ data Primary = Literal Literal
 --  }
 data ClassInstanceCreation =
        WithIdentifier (Maybe TypeArgs) Ident
-                TypeArgsOrDiam (Maybe ArgList) (Maybe ClassBody)
+                (Maybe TypeArgsOrDiam) (Maybe ArgList) (Maybe ClassBody)
      | WithExpressionName TypeName (Maybe TypeArgs)
-                TypeArgsOrDiam (Maybe ArgList) (Maybe ClassBody)
+                (Maybe TypeArgsOrDiam) (Maybe ArgList) (Maybe ClassBody)
      | WithPrimary Primary (Maybe TypeArgs) Ident
-                TypeArgsOrDiam (Maybe ArgList) (Maybe ClassBody)
+                (Maybe TypeArgsOrDiam) (Maybe ArgList) (Maybe ClassBody)
      PRODUCTION
 
 data TypeArgsOrDiam = TypeArgs TypeArgs
@@ -504,7 +504,7 @@ data MethodReference = NameMR TypeName (Maybe TypeArgs) Ident
                      | ArrayTypeMR ArrayType
                      PRODUCTION
 
-data DimExpr = DimExpr Expression
+data DimExpr = DimExpr (Maybe Expression)
              PRODUCTION
 
 type DimExprs = [DimExpr]
