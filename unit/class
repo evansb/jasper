@@ -24,6 +24,15 @@
             (MemberInterfaceDeclaration
                 (NormalInterface [] (Ident "Hello") Nothing Nothing []))
     ]
+),
+
+(
+    "public static strictfp class Long extends Goodbye implements Hello, Hello2 {}",
+    Class [Public,Static,StrictFP] (Ident "Long")
+    Nothing (Just (Extends (ClassType [Ident "Goodbye"] Nothing)))
+    (Just (Implements [ClassType [Ident "Hello"] Nothing,
+                       ClassType [Ident "Hello2"] Nothing]))
+    []
 )
 
 ]

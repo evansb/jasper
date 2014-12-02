@@ -7,12 +7,14 @@
         (PrimExpr (Literal (IntegerLiteral 1)))
         (PrimExpr (Literal (IntegerLiteral 2))))))))
 ),
+
 (
     "if (false) {}",
     IfThenStmt (Expression
         (Term (PrimExpr (Literal (BooleanLiteral False)))))
         (StatementWTS (BlockStmt EmptyBlock))
 ),
+
 (
     "if (false) { if (true) {} } else { if (true) {} else {} }",
     IfThenElseStmt (Expression (Term (PrimExpr (Literal (BooleanLiteral False)))))
@@ -26,6 +28,7 @@
             (StatementWTSNSI (BlockStmt EmptyBlock))
             (StatementWTS (BlockStmt EmptyBlock)))])))
 ),
+
 (
     "while(true) { doStuff(); }",
     WhileStmt (Expression (Term (PrimExpr (Literal (BooleanLiteral True)))))
@@ -35,18 +38,21 @@
                 (NormalMethodInvocation [Ident "doStuff"] Nothing))))))])))
 
 ),
+
 (
     "do {} while(true);",
     StatementWTS (DoStmt (StatementWTS (BlockStmt EmptyBlock))
         (Expression (Term (PrimExpr (Literal (BooleanLiteral True))))))
 ),
+
 (
    "for(;;) { }",
    ForStmt (BasicFor Nothing Nothing Nothing
     (StatementWTS (BlockStmt EmptyBlock)))
 ),
+
 (
-    "for(int x = 3, y = 4; y <= 4; x++) { x++; }"
+    "for(int x = 3, y = 4; y <= 4; x++) { x++; }",
     ForStmt (BasicFor
     (Just (ForInitDecl (LocalVariableDeclaration [] (PrimType IntT)
         [VariableDeclarator (Ident "x",0)
@@ -55,7 +61,7 @@
          VariableDeclarator (Ident "y",0)
             (Just (ExpressionInitializer
             (Expression (Term (PrimExpr (Literal (IntegerLiteral 4)))))))])))
-        (Just (Expression (Term 
+        (Just (Expression (Term
                   (BinaryExpr (Operator "<=") (NameExpr [Ident "y"])
                   (PrimExpr (Literal (IntegerLiteral 4)))))))
         (Just [Term (PostfixExpr (Operator "++") (NameExpr [Ident "x"]))])

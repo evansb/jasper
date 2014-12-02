@@ -14,6 +14,12 @@ interface Moo {
 }
 
 interface Hoo extends Moo, Comparable<Moo> {
+    interface WeNeedToGoDeeper {
+    }
+}
+
+enum Demo {
+    HELLO, GOODBYE
 }
 
 public abstract class Regression<T extends Comparable<T>> extends Object
@@ -23,6 +29,7 @@ public abstract class Regression<T extends Comparable<T>> extends Object
     static boolean b;
     private String name;
     private ArrayList<String> names;
+    private volatile String vola;
 
     /* Static initializer */
     static {
@@ -39,9 +46,13 @@ public abstract class Regression<T extends Comparable<T>> extends Object
     }
 
     private void sayHello() {
-        this.sayHello(); 
+        this.sayHello();
     }
 
+    private void sayGoodbye(
+            ArrayList<? extends Object> hello,
+            ArrayList<? super Object> hello2) {
+    }
 
     public static void main(String[] args) {
         System.out.println("\"Hello \nWorld\""
@@ -54,6 +65,8 @@ public abstract class Regression<T extends Comparable<T>> extends Object
             Integer[] coo = new Integer[20];
             int[][][] loo;
             double[] soo = { 1.0, 2.0, 3.0 };
+            ArrayList<Integer> as = new ArrayList<Integer>();
+            as.add((new String()).toString().length());
             for (int a : coo) {
                 continue;
             }
@@ -87,6 +100,12 @@ label:
             throw new InterruptedException();
         }
         catch (InterruptedException ie){
+        }
+    }
+
+    public synchronized void enterCS() {
+        synchronized(this) {
+
         }
     }
 }

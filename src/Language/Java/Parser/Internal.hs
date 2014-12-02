@@ -850,13 +850,13 @@ lambdaExpression = LambdaExpression
                 <?> "lambda expression"
 
 lambdaParameters :: JParser LambdaParameters
-lambdaParameters = choice
+lambdaParameters = choice (map try
                  [ LIdent <$> ident
                  , lParen *> (LFormalParameterList <$> optionMaybe
                                 formalParameterList) <* rParen
                  , lParen *> (LInferredFormalParameterList <$>
                                 inferredFormalParameterList) <* rParen
-                 ] <?> "lambda parameters"
+                 ]) <?> "lambda parameters"
 
 inferredFormalParameterList :: JParser InferredFormalParameterList
 inferredFormalParameterList = ident `sepBy1` comma

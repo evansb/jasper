@@ -1,5 +1,18 @@
 [
 (
+    "true && false || (false || false)",
+    Expression (Term (BinaryExpr
+    (Operator "||") (BinaryExpr (Operator "&&")
+    (PrimExpr (Literal (BooleanLiteral True)))
+    (PrimExpr (Literal (BooleanLiteral False))))
+    (PrimExpr (Expr (Expression (Term
+        (BinaryExpr (Operator "||")
+        (PrimExpr
+        (Literal (BooleanLiteral False))) (PrimExpr (Literal
+        (BooleanLiteral False))))))))))
+),
+
+(
     "1 && 4 * 2 + 1",
     Expression (Term
     (BinaryExpr (Operator "&&")
@@ -23,6 +36,17 @@
 ),
 
 (
+    "foo.bar(c,d).baz(a).qux(a, b)",
+    Expression (Term (PrimExpr (MethodInvocation (ExprMethodInvocation
+    (MethodInvocation (ExprMethodInvocation (MethodInvocation
+    (NormalMethodInvocation [Ident "foo",Ident "bar"] (Just (ArgList [Expression
+    (Term (NameExpr [Ident "c"])),Expression (Term (NameExpr [Ident "d"]))]))))
+    Nothing (Ident "baz") (Just (ArgList [Expression (Term (NameExpr [Ident
+    "a"]))])))) Nothing (Ident "qux") (Just (ArgList [Expression (Term (NameExpr
+    [Ident "a"])),Expression (Term (NameExpr [Ident "b"]))]))))))
+),
+
+(
     "alpha.super.beta[8 * quux[4]]",
     Expression (Term (PrimExpr (ArrayAccess
     (ExprArrayAccess
@@ -31,6 +55,46 @@
     (PrimExpr (Literal (IntegerLiteral 8)))
     (PrimExpr (ArrayAccess (NormalArrayAccess [Ident "quux"]
     (Expression (Term (PrimExpr (Literal (IntegerLiteral 4)))))))))))))))
+),
+
+
+(
+    "new int[20]",
+    Expression (Term (PrimExpr
+    (ArrayCreation (PrimTypeACE IntT
+    [DimExpr (Just
+    (Expression (Term (PrimExpr (Literal (IntegerLiteral 20))))))] 1))))
+),
+
+(
+    "new int[20]",
+    Expression (Term (PrimExpr
+    (ArrayCreation (PrimTypeACE IntT
+    [DimExpr (Just
+    (Expression (Term (PrimExpr (Literal (IntegerLiteral 20))))))] 1))))
+),
+
+(
+    "new String<T>[20]",
+    Expression (Term (PrimExpr
+    (ArrayCreation (ClassTypeACE (ClassType [Ident "String"]
+    (Just [ActualType (ClassOrInterfaceType (ClassType [Ident "T"] Nothing))]))
+    [DimExpr (Just (Expression (Term
+    (PrimExpr (Literal (IntegerLiteral 20))))))] 1))))
+),
+
+(
+    "Object::method",
+    Expression (Term (PrimExpr
+    (MethodReference (NameMR [Ident "Object"] Nothing (Ident "method")))))
+),
+
+(
+    "(p, q) -> p + q",
+    LambdaExpression
+    (LInferredFormalParameterList [Ident "p",Ident "q"])
+    (Lambda (Expression (Term (BinaryExpr (Operator "+")
+    (NameExpr [Ident "p"]) (NameExpr [Ident "q"])))))
 )
 
 ]
